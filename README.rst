@@ -38,6 +38,7 @@ Installation
 The recommended way to install StochOPy is using pip:
 
 .. code-block:: bash
+
     pip install stochopy
     
 
