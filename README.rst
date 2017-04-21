@@ -47,6 +47,7 @@ Usage
 First, import StochOPy and define an objective function (here Rosenbrock):
 
 .. code-block:: python
+
     import numpy as np
     from stochopy import MonteCarlo, Evolutionary
     
@@ -55,6 +56,7 @@ First, import StochOPy and define an objective function (here Rosenbrock):
 You can define the search space boundaries if necessary:
 
 .. code-block:: python
+
     n_dim = 2
     lower = np.full(n_dim, -5.12)
     upper = np.full(n_dim, 5.12)
@@ -62,24 +64,28 @@ You can define the search space boundaries if necessary:
 Initialize the Monte-Carlo sampler:
 
 .. code-block:: python
+
     max_iter = 1000
     mc = MonteCarlo(f, lower = lower, upper = upper, max_iter = max_iter)
     
 Now, you can start sampling with the simple method 'sample':
 
 .. code-block:: python
+
     mc.sample(sampler = "hamiltonian", stepsize = 0.005, n_leap = 20, xstart = [ 2., 2. ])
 
 Note that sampler can be set to "pure" or "hastings" too.
 The models sampled and their corresponding energies are stored in:
 
 .. code-block:: python
+
     print(mc.models)
     print(mc.energy)
     
 Optimization is just as easy:
 
 .. code-block:: python
+
     n_dim = 10
     lower = np.full(n_dim, -5.12)
     upper = np.full(n_dim, 5.12)
