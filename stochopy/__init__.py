@@ -7,4 +7,4 @@ to sample or optimize objective functions with the most popular algorithms.
 
 from .stochopy import MonteCarlo, Evolutionary
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"
