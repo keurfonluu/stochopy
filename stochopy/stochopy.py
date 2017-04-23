@@ -1022,7 +1022,7 @@ class Evolutionary:
             # Set initial weights
             if iniphase:
                 if np.any(ti):
-                    bnd_weights = 2.0002 * np.median(dfithist)
+                    bnd_weights.fill(2.0002 * np.median(dfithist))
                     if validfitval and it > 2:
                         iniphase = False
                         
@@ -1169,13 +1169,13 @@ class Evolutionary:
         Stopping criterion:
             - 0, best individual position changes less than eps1.
             - 1, maximum number of iterations is reached.
-            - 2, NoEffectAxis (only if solver = 'cmaes').
-            - 3, NoEffectCoord (only if solver = 'cmaes').
-            - 4, ConditionCov (only if solver = 'cmaes').
-            - 5, EqualFunValues (only if solver = 'cmaes').
-            - 6, TolXUp (only if solver = 'cmaes').
-            - 7, TolFun (only if solver = 'cmaes').
-            - 8, TolX (only if solver = 'cmaes').
+            - 2, NoEffectAxis (only when solver = 'cmaes').
+            - 3, NoEffectCoord (only when solver = 'cmaes').
+            - 4, ConditionCov (only when solver = 'cmaes').
+            - 5, EqualFunValues (only when solver = 'cmaes').
+            - 6, TolXUp (only when solver = 'cmaes').
+            - 7, TolFun (only when solver = 'cmaes').
+            - 8, TolX (only when solver = 'cmaes').
         """
         return self._flag
     
