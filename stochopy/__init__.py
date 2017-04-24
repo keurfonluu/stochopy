@@ -11,4 +11,4 @@ License: MIT
 from .stochopy import MonteCarlo, Evolutionary
 
 __all__ = [ "MonteCarlo", "Evolutionary" ]
-__version__ = "1.1.0"
+__version__ = "1.1.1"

@@ -158,7 +158,7 @@ class MonteCarlo:
         # Check inputs
         if not isinstance(sampler, str) or sampler not in [ "pure", "hastings", "hamiltonian" ]:
             raise ValueError("sampler must either be 'pure', 'hastings' or 'hamiltonian', got %s" % sampler)
-        if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.array)) \
+        if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.ndarray)) \
             and len(xstart) != self._n_dim:
             raise ValueError("xstart must be a list or ndarray of length n_dim")
         if not isinstance(stepsize, float) and not isinstance(stepsize, int) or stepsize <= 0.:
@@ -629,7 +629,7 @@ class Evolutionary:
             raise ValueError("F must be an integer or float in [ 0, 2 ], got %s" % F)
         if not isinstance(CR, float) and not isinstance(CR, int) or not 0. <= CR <= 1.:
             raise ValueError("CR must be an integer or float in [ 0, 1 ], got %s" % CR)
-        if xstart is not None and isinstance(xstart, np.array) \
+        if xstart is not None and isinstance(xstart, np.ndarray) \
             and xstart.shape != (self._n_dim, self._popsize):
             raise ValueError("xstart must be a ndarray of shape (n_dim, popsize)")
         
@@ -780,7 +780,7 @@ class Evolutionary:
             raise ValueError("c1 must be an integer or float in [ 0, 4 ], got %s" % c1)
         if not isinstance(c2, float) and not isinstance(c2, int) or not 0. <= c2 <= 4.:
             raise ValueError("c2 must be an integer or float in [ 0, 4 ], got %s" % c2)
-        if xstart is not None and isinstance(xstart, np.array) \
+        if xstart is not None and isinstance(xstart, np.ndarray) \
             and xstart.shape != (self._n_dim, self._popsize):
             raise ValueError("xstart must be a ndarray of shape (n_dim, popsize)")
         
@@ -922,7 +922,7 @@ class Evolutionary:
             raise ValueError("sigma must be positive, got %s" % sigma)
         if not isinstance(mu_perc, float) and not isinstance(mu_perc, int) or not 0. < mu_perc <= 1.:
             raise ValueError("mu_perc must be an integer or float in ] 0, 1 ], got %s" % mu_perc)
-        if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.array)) \
+        if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.ndarray)) \
             and len(xstart) != self._n_dim:
             raise ValueError("xstart must be a list or ndarray of length n_dim")
         
