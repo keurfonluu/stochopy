@@ -3,16 +3,17 @@
 """
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
+
+Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
+License: MIT
 """
 
 import numpy as np
-
+from warnings import warn
 
 __all__ = [ "MonteCarlo", "Evolutionary" ]
 
 
-# Object MonteCarlo
-#===================
 class MonteCarlo:
     """
     Monte-Carlo sampler.
@@ -51,9 +52,9 @@ class MonteCarlo:
             raise ValueError("upper is not defined")
         elif lower is not None and upper is not None:
             if len(lower) != len(upper):
-                raise ValueError("lower and upper have different size")
+                raise ValueError("lower and upper must have the same length")
             if np.any(upper < lower):
-                raise ValueError("lower greater than upper")
+                raise ValueError("upper must be greater than lower")
             self._lower = np.array(lower)
             self._upper = np.array(upper)
             self._n_dim = len(lower)
@@ -61,8 +62,8 @@ class MonteCarlo:
             self._lower = np.full(n_dim, -1.)
             self._upper = np.full(n_dim, 1.)
             self._n_dim = n_dim
-        if max_iter <= 0:
-            raise ValueError("max_iter cannot be zero or negative")
+        if not isinstance(max_iter, int) or max_iter <= 0:
+            raise ValueError("max_iter must be a positive integer, got %s" % max_iter)
         else:
             self._max_iter = max_iter
         if random_state is not None:
@@ -155,12 +156,13 @@ class MonteCarlo:
                                    n_leap = 20, fprime = grad, xstart = x0)
         """
         # Check inputs
-        if not isinstance(sampler, str) and  sampler not in [ "pure", "hastings", "hamiltonian" ]:
-            raise ValueError("unknown sampler '" + str(sampler) + "'")
-        if xstart is not None and len(xstart) != self._n_dim:
-            raise ValueError("xstart dimension mismatches n_dim")
-        if stepsize <= 0:
-            raise ValueError("stepsize cannot be zero or negative")
+        if not isinstance(sampler, str) or sampler not in [ "pure", "hastings", "hamiltonian" ]:
+            raise ValueError("sampler must either be 'pure', 'hastings' or 'hamiltonian', got %s" % sampler)
+        if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.array)) \
+            and len(xstart) != self._n_dim:
+            raise ValueError("xstart must be a list or ndarray of length n_dim")
+        if not isinstance(stepsize, float) and not isinstance(stepsize, int) or stepsize <= 0.:
+            raise ValueError("stepsize must be positive, got %s" % stepsize)
         
         # Initialize
         self._solver = sampler
@@ -178,7 +180,7 @@ class MonteCarlo:
                                            xstart = xstart,
                                            delta = delta,
                                            snap_leap = snap_leap,
-                                           args = (), kwargs = {})
+                                           args = args, kwargs = kwargs)
         return xopt, gfit
     
     def _init_models(self):
@@ -258,7 +260,7 @@ class MonteCarlo:
         # Return best model
         return self._best_model()
         
-    def _hamiltonian(self, fprime = None, stepsize = 1., n_leap = 10, xstart = None,
+    def _hamiltonian(self, fprime = None, stepsize = 0.1, n_leap = 10, xstart = None,
                     delta = 1e-3, snap_leap = False, args = (), kwargs = {}):
         """
         Sample the parameter space using the Hamiltonian (Hybrid) Monte-Carlo
@@ -271,7 +273,7 @@ class MonteCarlo:
             required for its computation should be passed in 'args' and/or
             'kwargs'. If 'fprime' is None, the gradient is computed numerically
             with a centred finite-difference scheme.
-        stepsize : scalar, optional, default 1.
+        stepsize : scalar, optional, default 0.1
             Leap-frog step size.
         n_leap : int, optional, default 10
             Number of leap-frog steps.
@@ -307,8 +309,8 @@ class MonteCarlo:
                 raise ValueError("fprime is not callable")
             else:
                 grad = lambda x: fprime(x, *args, **kwargs)
-        if n_leap <= 0:
-            raise ValueError("n_leap cannot be zero or negative")
+        if not isinstance(n_leap, int) or n_leap <= 0:
+            raise ValueError("n_leap must be a positive integer, got %s" % n_leap)
         
         # Initialize models
         if xstart is None:
@@ -399,8 +401,6 @@ class MonteCarlo:
         return self._leap_frog
 
 
-# Object Evolutionary
-#=====================
 class Evolutionary:
     """
     Evolutionary Algorithm optimizer.
@@ -421,7 +421,7 @@ class Evolutionary:
     n_dim : int, optional, default 1
         Search space dimension. Only used if 'lower' and 'upper' are not
         provided.
-    popsize : int, optional, default 4
+    popsize : int, optional, default 10
         Population size.
     max_iter : int, optional, default 100
         Maximum number of iterations.
@@ -436,7 +436,7 @@ class Evolutionary:
     """
     
     def __init__(self, func, lower = None, upper = None, n_dim = 1,
-                 popsize = 4, max_iter = 100, eps1 = 1e-8, eps2 = 1e-8,
+                 popsize = 10, max_iter = 100, eps1 = 1e-8, eps2 = 1e-8,
                  clip = False, random_state = None, args = (), kwargs = {}):
         # Check inputs
         if not hasattr(func, "__call__"):
@@ -449,9 +449,9 @@ class Evolutionary:
             raise ValueError("upper is not defined")
         elif lower is not None and upper is not None:
             if len(lower) != len(upper):
-                raise ValueError("lower and upper have different size")
+                raise ValueError("lower and upper must have the same length")
             if np.any(upper < lower):
-                raise ValueError("lower greater than upper")
+                raise ValueError("upper must be greater than lower")
             self._lower = np.array(lower)
             self._upper = np.array(upper)
             self._n_dim = len(lower)
@@ -459,17 +459,26 @@ class Evolutionary:
             self._lower = np.full(n_dim, -1.)
             self._upper = np.full(n_dim, 1.)
             self._n_dim = n_dim
-        if max_iter <= 0:
-            raise ValueError("max_iter cannot be zero or negative")
+        if not isinstance(max_iter, int) or max_iter <= 0:
+            raise ValueError("max_iter must be a positive integer, got %s" % max_iter)
         else:
             self._max_iter = max_iter
-        if popsize < 2:
-            raise ValueError("popsize cannot be lower than 2")
+        if not isinstance(popsize, int) or popsize < 2:
+            raise ValueError("popsize must be an integer > 1, got %s" % popsize)
         else:
             self._popsize = int(popsize)
-        self._eps1 = eps1
-        self._eps2 = eps2
-        self._clip = clip
+        if not isinstance(eps1, float) and not isinstance(eps1, int) or eps1 < 0.:
+            raise ValueError("eps1 must be positive, got %s" % eps1)
+        else:
+            self._eps1 = eps1
+        if not isinstance(eps2, float) and not isinstance(eps2, int):
+            raise ValueError("eps2 must be an integer or float, got %s" % eps2)
+        else:
+            self._eps2 = eps2
+        if not isinstance(clip, bool):
+            raise ValueError("clip must be either True or False, got %s" % clip)
+        else:
+            self._clip = clip
         if random_state is not None:
             np.random.seed(random_state)
         return
@@ -556,8 +565,8 @@ class Evolutionary:
         >>> xopt, gfit = ea.optimize(solver = "cmaes")
         """
         # Check input
-        if not isinstance(solver, str) and solver not in [ "pso", "de", "cmaes" ]:
-            raise ValueError("unknown solver '" + str(solver) + "'")
+        if not isinstance(solver, str) or solver not in [ "pso", "de", "cmaes" ]:
+            raise ValueError("solver must either be 'pso', 'de' or 'cmaes', got %s" % solver)
         
         # Initialize
         self._solver = solver
@@ -616,12 +625,13 @@ class Evolutionary:
         if self._popsize <= 2:
             self._popsize = 3
             raise Warning("popsize cannot be lower than 3 for DE, popsize set to 3")
-        if not 0. <= F <= 2.:
-            raise ValueError("F is not in [ 0, 2 ]")
-        if not 0. <= CR <= 1.:
-            raise ValueError("CR is not in [ 0, 1 ]")
-        if xstart is not None and xstart.shape != (self._n_dim, self._popsize):
-            raise ValueError("xstart dimension mismatches n_dim and popsize")
+        if not isinstance(F, float) and not isinstance(F, int) or not 0. <= F <= 2.:
+            raise ValueError("F must be an integer or float in [ 0, 2 ], got %s" % F)
+        if not isinstance(CR, float) and not isinstance(CR, int) or not 0. <= CR <= 1.:
+            raise ValueError("CR must be an integer or float in [ 0, 1 ], got %s" % CR)
+        if xstart is not None and isinstance(xstart, np.array) \
+            and xstart.shape != (self._n_dim, self._popsize):
+            raise ValueError("xstart must be a ndarray of shape (n_dim, popsize)")
         
         # Population initial positions
         X = np.zeros((self._n_dim, self._popsize))
@@ -764,14 +774,15 @@ class Evolutionary:
                University of Pretoria, 2001
         """
         # Check inputs
-        if not 0. <= w <= 1.:
-            raise ValueError("w is not in [ 0, 1 ]")
-        if not 0. <= c1 <= 4.:
-            raise ValueError("c1 is not in [ 0, 4 ]")
-        if not 0. <= c2 <= 4.:
-            raise ValueError("c2 is not in [ 0, 4 ]")
-        if xstart is not None and xstart.shape != (self._n_dim, self._popsize):
-            raise ValueError("xstart dimension mismatches n_dim and popsize")
+        if not isinstance(w, float) and not isinstance(w, int) or not 0. <= w <= 1.:
+            raise ValueError("w must be an integer or float in [ 0, 1 ], got %s" % w)
+        if not isinstance(c1, float) and not isinstance(c1, int) or not 0. <= c1 <= 4.:
+            raise ValueError("c1 must be an integer or float in [ 0, 4 ], got %s" % c1)
+        if not isinstance(c2, float) and not isinstance(c2, int) or not 0. <= c2 <= 4.:
+            raise ValueError("c2 must be an integer or float in [ 0, 4 ], got %s" % c2)
+        if xstart is not None and isinstance(xstart, np.array) \
+            and xstart.shape != (self._n_dim, self._popsize):
+            raise ValueError("xstart must be a ndarray of shape (n_dim, popsize)")
         
         # Particles initial positions
         X = np.zeros((self._n_dim, self._popsize))
@@ -906,13 +917,14 @@ class Evolutionary:
         # Check inputs
         if self._popsize <= 3:
             self._popsize = 4
-            raise Warning("popsize cannot be lower than 4 for CMA-ES, popsize set to 4")
-        if sigma <= 0:
-            raise ValueError("sigma cannot be zero or negative")
-        if not 0. < mu_perc <= 1.:
-            raise ValueError("mu_perc is not in ] 0, 1 ]")
-        if xstart is not None and len(xstart) != self._n_dim:
-            raise ValueError("xstart dimension mismatches n_dim")
+            warn("\npopsize cannot be lower than 4 for CMA-ES, popsize set to 4", UserWarning)
+        if not isinstance(sigma, float) and not isinstance(sigma, int) or sigma <= 0.:
+            raise ValueError("sigma must be positive, got %s" % sigma)
+        if not isinstance(mu_perc, float) and not isinstance(mu_perc, int) or not 0. < mu_perc <= 1.:
+            raise ValueError("mu_perc must be an integer or float in ] 0, 1 ], got %s" % mu_perc)
+        if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.array)) \
+            and len(xstart) != self._n_dim:
+            raise ValueError("xstart must be a list or ndarray of length n_dim")
         
         # Initialize saved outputs
         if snap:

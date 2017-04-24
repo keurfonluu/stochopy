@@ -5,7 +5,7 @@ StochOPy
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.0.2
+:Version: 1.1.0
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -19,7 +19,7 @@ to contact me.
 Features
 ========
 
-StochOPy provides routines for sampling of the parameter space:
+StochOPy provides routines for sampling of a model parameter space:
 
 * Pure Monte-Carlo
 * Metropolis-Hastings algorithm
@@ -35,7 +35,7 @@ or optimization of an objective function:
 Installation
 ============
 
-The recommended way to install StochOPy is using pip:
+The recommended way to install StochOPy is through pip:
 
 .. code-block:: bash
 
