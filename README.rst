@@ -5,7 +5,7 @@ StochOPy
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.1.1
+:Version: 1.1.2
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -35,11 +35,17 @@ or optimization of an objective function:
 Installation
 ============
 
-The recommended way to install StochOPy is through pip:
+The recommended way to install StochOPy is through pip (internet required):
 
 .. code-block:: bash
 
     pip install stochopy
+    
+Otherwise, download and extract the package, then run:
+
+.. code-block:: bash
+
+    python setup.py install
     
 
 Usage

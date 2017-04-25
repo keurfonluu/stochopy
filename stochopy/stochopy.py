@@ -456,8 +456,8 @@ class Evolutionary:
             self._upper = np.array(upper)
             self._n_dim = len(lower)
         else:
-            self._lower = np.full(n_dim, -1.)
-            self._upper = np.full(n_dim, 1.)
+            self._lower = np.full(n_dim, -100.)
+            self._upper = np.full(n_dim, 100.)
             self._n_dim = n_dim
         if not isinstance(max_iter, int) or max_iter <= 0:
             raise ValueError("max_iter must be a positive integer, got %s" % max_iter)
