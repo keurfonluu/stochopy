@@ -8,7 +8,8 @@ Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT
 """
 
-from .stochopy import MonteCarlo, Evolutionary
+from .monte_carlo import MonteCarlo
+from .evolutionary_algorithm import Evolutionary
 
 __all__ = [ "MonteCarlo", "Evolutionary" ]
-__version__ = "1.1.2"
+__version__ = "1.2.0"

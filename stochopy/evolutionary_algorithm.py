@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
-to sample or optimize objective functions with the most popular algorithms.
+Evolutionary Algorithms are population based stochastic global optimization
+methods.
 
 Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT
@@ -11,394 +11,7 @@ License: MIT
 import numpy as np
 from warnings import warn
 
-__all__ = [ "MonteCarlo", "Evolutionary" ]
-
-
-class MonteCarlo:
-    """
-    Monte-Carlo sampler.
-    
-    This sampler explores the parameter space using pure Monte-Carlo,
-    Metropolis-Hastings algorithm or Hamiltonian (Hybrid) Monte-Carlo.
-    
-    Parameters
-    ----------
-    func : callable
-        Objective function. If necessary, the variables required for its
-        computation should be passed in 'args' and/or 'kwargs'.
-    lower : ndarray, optional, default None
-        Search space lower boundary.
-    upper : ndarray, optional, default None
-        Search space upper boundary.
-    n_dim : int, optional, default 1
-        Search space dimension. Only used if 'lower' and 'upper' are not
-        provided.
-    max_iter : int, optional, default 1000
-        Number of models to sample.
-    random_state : int, optional, default None
-        Seed for random number generator.
-    """
-    
-    def __init__(self, func, lower = None, upper = None, n_dim = 1,
-                 max_iter = 1000, random_state = None, args = (), kwargs = {}):
-        # Check inputs
-        if not hasattr(func, "__call__"):
-            raise ValueError("func is not callable")
-        else:
-            self._func = lambda x: func(x, *args, **kwargs)
-        if lower is None and upper is not None:
-            raise ValueError("lower is not defined")
-        elif upper is None and lower is not None:
-            raise ValueError("upper is not defined")
-        elif lower is not None and upper is not None:
-            if len(lower) != len(upper):
-                raise ValueError("lower and upper must have the same length")
-            if np.any(upper < lower):
-                raise ValueError("upper must be greater than lower")
-            self._lower = np.array(lower)
-            self._upper = np.array(upper)
-            self._n_dim = len(lower)
-        else:
-            self._lower = np.full(n_dim, -1.)
-            self._upper = np.full(n_dim, 1.)
-            self._n_dim = n_dim
-        if not isinstance(max_iter, int) or max_iter <= 0:
-            raise ValueError("max_iter must be a positive integer, got %s" % max_iter)
-        else:
-            self._max_iter = max_iter
-        if random_state is not None:
-            np.random.seed(random_state)
-        return
-    
-    def sample(self, sampler = "hastings", stepsize = 1., xstart = None,
-               n_leap = 10, fprime = None, delta = 1e-3, snap_leap = False,
-               args = (), kwargs = {}):
-        """
-        Sample the parameter space using pure Monte-Carlo,
-        Metropolis-Hastings algorithm or Hamiltonian (Hybrid) Monte-Carlo.
-        
-        Parameters
-        ----------
-        sampler : {'pure', 'hastings', 'hamiltonian'}, default 'hastings'
-            Sampling method.
-            - 'pure', uniform sampling in the search space [ lower, upper ].
-            - 'hastings', random-walk with a gaussian perturbation.
-            - 'hamiltonian', propose a new sample simulated with hamiltonian
-              dynamics.
-        stepsize : scalar, optional, default 1.
-            If sampler = 'pure', 'xstart' is not used.
-            If sampler = 'hastings', standard deviation of gaussian
-            perturbation.
-            If sampler = 'hamiltonian', leap-frog step size.
-        xstart : None or ndarray, optional, default None
-            First model of the Markov chain. If sampler = 'pure', 'xstart'
-            is not used.
-        n_leap : int, optional, default 10
-            Number of leap-frog steps. Only used when sampler = 'hamiltonian'.
-        fprime : callable, optional, default None
-            Gradient of the objective function. If necessary, the variables
-            required for its computation should be passed in 'args' and/or
-            'kwargs'. If 'fprime' is None, the gradient is computed numerically
-            with a centred finite-difference scheme. Only used when
-            sampler = 'hamiltonian'.
-        delta : scalar, optional, default 1e-3
-            Discretization size of the numerical gradient. Only used when
-            'fprime' is None. Only used when sampler = 'hamiltonian'.
-        snap_leap : bool, optional, default False
-            Save the leap-frog positions in a 3-D array with shape
-            (n_dim, n_leap+1, max_iter-1) in an attribute 'leap_frog'. For
-            visualization purpose only. Only used when sampler = 'hamiltonian'.
-            
-        Returns
-        -------
-        xopt : ndarray
-            Maximum a posteriori (MAP) model.
-        gfit : scalar
-            Energy of the MAP model.
-        
-        Examples
-        --------
-        Import the module and define the objective function (Sphere):
-        
-        >>> import numpy as np
-        >>> from stochopy import MonteCarlo
-        >>> f = lambda x: np.sum(x**2)
-        
-        Define the search space boundaries in 2-D:
-        
-        >>> n_dim = 2
-        >>> lower = np.full(n_dim, -5.12)
-        >>> upper = np.full(n_dim, 5.12)
-        
-        Initialize the Monte-Carlo sampler:
-        
-        >>> max_iter = 1000
-        >>> mc = MonteCarlo(f, lower = lower, upper = upper,
-                            max_iter = max_iter)
-        
-        Pure Monte-Carlo:
-        
-        >>> xopt, gfit = mc.sample(sampler = "pure")
-        
-        Monte-Carlo Markov-Chain (Metropolis-Hastings):
-        
-        >>> xopt, gfit = mc.sample(sampler = "hastings", stepsize = 0.8)
-        
-        Hamiltonian (Hybrid) Monte-Carlo:
-        >>> xopt, gfit = mc.sample(sampler = "hamiltonian", stepsize = 0.1,
-                                   n_leap = 20)
-        
-        HMC with custom gradient and xstart:
-        
-        >>> grad = lambda x: 2.*x
-        >>> x0 = np.array([ 2., 2. ])
-        >>> xopt, gfit = mc.sample(sampler = "hamiltonian", stepsize = 0.1,
-                                   n_leap = 20, fprime = grad, xstart = x0)
-        """
-        # Check inputs
-        if not isinstance(sampler, str) or sampler not in [ "pure", "hastings", "hamiltonian" ]:
-            raise ValueError("sampler must either be 'pure', 'hastings' or 'hamiltonian', got %s" % sampler)
-        if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.ndarray)) \
-            and len(xstart) != self._n_dim:
-            raise ValueError("xstart must be a list or ndarray of length n_dim")
-        if not isinstance(stepsize, float) and not isinstance(stepsize, int) or stepsize <= 0.:
-            raise ValueError("stepsize must be positive, got %s" % stepsize)
-        
-        # Initialize
-        self._solver = sampler
-        self._init_models()
-        
-        # Sample
-        if sampler is "pure":
-            xopt, gfit = self._pure()
-        elif sampler is "hastings":
-            xopt, gfit = self._hastings(stepsize = stepsize, xstart = xstart)
-        elif sampler is "hamiltonian":
-            xopt, gfit = self._hamiltonian(fprime = fprime,
-                                           stepsize = stepsize,
-                                           n_leap = n_leap,
-                                           xstart = xstart,
-                                           delta = delta,
-                                           snap_leap = snap_leap,
-                                           args = args, kwargs = kwargs)
-        return xopt, gfit
-    
-    def _init_models(self):
-        self._models = np.zeros((self._n_dim, self._max_iter))
-        self._energy = np.zeros(self._max_iter)
-        return
-    
-    def _random_model(self):
-        return self._lower + np.random.rand(self._n_dim) * (self._upper - self._lower)
-    
-    def _best_model(self):
-        idx = np.argmin(self._energy)
-        return self._models[:,idx], self._energy[idx]
-        
-    def _pure(self):
-        """
-        Sample the parameter space using the a pure Monte-Carlo algorithm.
-            
-        Returns
-        -------
-        xopt : ndarray
-            Maximum a posteriori (MAP) model.
-        gfit : scalar
-            Energy of the MAP model.
-        """
-        for i in range(self._max_iter):
-            self._models[:,i] = self._random_model()
-            self._energy[i] = self._func(self._models[:,i])
-        return self._best_model()
-        
-    def _hastings(self, stepsize = 1., xstart = None):
-        """
-        Sample the parameter space using the Metropolis-Hastings algorithm.
-        
-        Parameters
-        ----------
-        stepsize : scalar, optional, default 1.
-            Standard deviation of gaussian perturbation.
-        xstart : None or ndarray, optional, default None
-            First model of the Markov chain.
-            
-        Returns
-        -------
-        xopt : ndarray
-            Maximum a posteriori (MAP) model.
-        gfit : scalar
-            Energy of the MAP model.
-        
-        Notes
-        -----
-        A rule-of-thumb for proper sampling is:
-         -  if n_dim <= 2 : acceptance ratio of 50%
-         -  otherwise : acceptance ratio of 25%
-        The acceptance ratio is given by the attribute 'acceptance_ratio'.
-        """
-        # Initialize models
-        if xstart is None:
-            self._models[:,0] = self._random_model()
-        else:
-            self._models[:,0] = np.array(xstart)
-        self._energy[0] = self._func(self._models[:,0])
-        
-        # Metropolis-Hastings algorithm
-        rejected = 0
-        for i in range(1, self._max_iter):
-            r1 = np.random.randn(self._n_dim)
-            self._models[:,i] = self._models[:,i-1] + r1 * stepsize
-            self._energy[i] = self._func(self._models[:,i])
-            
-            log_alpha = min(0., self._energy[i-1] - self._energy[i])
-            if log_alpha < np.log(np.random.rand()):
-                rejected += 1
-                self._models[:,i] = self._models[:,i-1]
-                self._energy[i] = self._energy[i-1]
-        self._acceptance_ratio = 1. - rejected / self._max_iter
-                
-        # Return best model
-        return self._best_model()
-        
-    def _hamiltonian(self, fprime = None, stepsize = 0.1, n_leap = 10, xstart = None,
-                    delta = 1e-3, snap_leap = False, args = (), kwargs = {}):
-        """
-        Sample the parameter space using the Hamiltonian (Hybrid) Monte-Carlo
-        algorithm.
-        
-        Parameters
-        ----------
-        fprime : callable, optional, default None
-            Gradient of the objective function. If necessary, the variables
-            required for its computation should be passed in 'args' and/or
-            'kwargs'. If 'fprime' is None, the gradient is computed numerically
-            with a centred finite-difference scheme.
-        stepsize : scalar, optional, default 0.1
-            Leap-frog step size.
-        n_leap : int, optional, default 10
-            Number of leap-frog steps.
-        xstart : None or ndarray, optional, default None
-            First model of the Markov chain.
-        delta : scalar, optional, default 1e-3
-            Discretization size of the numerical gradient. Only used when
-            'fprime' is None.
-        snap_leap : bool, optional, default False
-            Save the leap-frog positions in a 3-D array with shape
-            (n_dim, n_leap+1, max_iter-1) in an attribute 'leap_frog'. For
-            visualization purpose only.
-            
-        Returns
-        -------
-        xopt : ndarray
-            Maximum a posteriori (MAP) model.
-        gfit : scalar
-            Energy of the MAP model.
-            
-        References
-        ----------
-        .. [1] S. Duane, A. D. Kennedy, B. J. Pendleton and D. Roweth, *Hybrid
-               Monte Carlo*, Physics Letters B., 1987, 195(2): 216-222
-        .. [2] N. Radford, *MCMC Using Hamiltonian Dynamics*, Handbook of
-               Markov Chain Monte Carlo, Chapman and Hall/CRC, 2011
-        """
-        # Check inputs
-        if fprime is None:
-            grad = lambda x: self._approx_grad(x, delta)
-        else:
-            if not hasattr(fprime, "__call__"):
-                raise ValueError("fprime is not callable")
-            else:
-                grad = lambda x: fprime(x, *args, **kwargs)
-        if not isinstance(n_leap, int) or n_leap <= 0:
-            raise ValueError("n_leap must be a positive integer, got %s" % n_leap)
-        
-        # Initialize models
-        if xstart is None:
-            self._models[:,0] = self._random_model()
-        else:
-            self._models[:,0] = np.array(xstart)
-        self._energy[0] = self._func(self._models[:,0])
-        
-        # Save leap frog trajectory
-        if snap_leap:
-            self._leap_frog = np.zeros((self._n_dim, n_leap+1, self._max_iter-1))
-        
-        # Leap-frog algorithm
-        rejected = 0
-        for i in range(1, self._max_iter):
-            q = np.array(self._models[:,i-1])
-            p = np.random.randn(self._n_dim)            # Random momentum
-            q0, p0 = np.array(q), np.array(p)
-            if snap_leap:
-                self._leap_frog[:,0,i-1] = np.array(q)
-            
-            p -= 0.5 * stepsize * grad(q)               # First half momentum step
-            q += stepsize * p                           # First full position step
-            for l in range(n_leap):
-                p -= stepsize * grad(q)                 # Momentum
-                q += stepsize * p                       # Position
-                if snap_leap:
-                    self._leap_frog[:,l+1,i-1] = np.array(q)
-            p -= 0.5 * stepsize * grad(q)               # Last half momentum step
-            
-            U0 = self._func(q0)
-            K0 = 0.5 * np.sum(p0**2)
-            U = self._func(q)
-            K = 0.5 * np.sum(p**2)
-            log_alpha = min(0., U0 - U + K0 - K)
-            if log_alpha < np.log(np.random.rand()):
-                rejected += 1
-                self._models[:,i] = self._models[:,i-1]
-                self._energy[i] = self._energy[i-1]
-            else:
-                self._models[:,i] = q
-                self._energy[i] = U
-        self._acceptance_ratio = 1. - rejected / self._max_iter
-        
-        # Return best model
-        return self._best_model()
-    
-    def _approx_grad(self, x, delta = 1e-3):
-        grad = np.zeros(self._n_dim)
-        for i in range(self._n_dim):
-            x1, x2 = np.array(x), np.array(x)
-            x1[i] -= delta
-            x2[i] += delta
-            grad[i] = 0.5 * ( self._func(x2) - self._func(x1) ) / delta
-        return grad
-    
-    @property
-    def models(self):
-        """
-        ndarray of shape (n_dim, max_iter)
-        Sampled models.
-        """
-        return self._models
-    
-    @property
-    def energy(self):
-        """
-        ndarray of shape (max_iter)
-        Energy of sampled models.
-        """
-        return self._energy
-    
-    @property
-    def acceptance_ratio(self):
-        """
-        scalar between 0 and 1
-        Acceptance ratio of sampler. Not available when sampler = 'pure'.
-        """
-        return self._acceptance_ratio
-    
-    @property
-    def leap_frog(self):
-        """
-        ndarray of shape (n_leap, n_leap+1, max_iter-1)
-        Leap frog positions. Available only when sampler = 'hamiltonian' and
-        snap_leap = True.
-        """
-        return self._leap_frog
+__all__ = [ "Evolutionary" ]
 
 
 class Evolutionary:
@@ -406,8 +19,9 @@ class Evolutionary:
     Evolutionary Algorithm optimizer.
     
     This optimizer minimizes an objective function using Differential
-    Evolution (DE), Particle Swarm Optimization (PSO) or Covariance Matrix
-    Adaptation - Evolution Strategy (CMA-ES).
+    Evolution (DE), Particle Swarm Optimization (PSO), Competitive Particle
+    Swarm Optimization (CPSO), or Covariance Matrix Adaptation - Evolution
+    Strategy (CMA-ES).
     
     Parameters
     ----------
@@ -463,7 +77,7 @@ class Evolutionary:
             raise ValueError("max_iter must be a positive integer, got %s" % max_iter)
         else:
             self._max_iter = max_iter
-        if not isinstance(popsize, int) or popsize < 2:
+        if not isinstance(popsize, float) and not isinstance(popsize, int) or popsize < 2:
             raise ValueError("popsize must be an integer > 1, got %s" % popsize)
         else:
             self._popsize = int(popsize)
@@ -483,20 +97,22 @@ class Evolutionary:
             np.random.seed(random_state)
         return
     
-    def optimize(self, solver = "pso", xstart = None, w = 0.72, c1 = 1.49,
-                 c2 = 1.49, l = 0.1, F = 1., CR = 0.5, sigma = 1.,
-                 mu_perc = 0.5, snap = False):
+    def optimize(self, solver = "cpso", xstart = None, w = 0.72, c1 = 1.49,
+                 c2 = 1.49, l = 0.1, alpha = 1.25, delta = None, F = 1., CR = 0.5,
+                 sigma = 1., mu_perc = 0.5, snap = False):
         """
         Minimize an objective function using Differential Evolution (DE),
-        Particle Swarm Optimization (PSO) or Covariance Matrix Adaptation
-        - Evolution Strategy (CMA-ES).
+        Particle Swarm Optimization (PSO), Competitive Particle Swarm
+        Optimization (CPSO), or Covariance Matrix Adaptation - Evolution
+        Strategy (CMA-ES).
         
         Parameters
         ----------
-        solver : {'de', 'pso', 'cmaes'}, default 'pso'
+        solver : {'de', 'pso', 'cpso', 'cmaes'}, default 'cpso'
             Optimization method.
             - 'de', Differential Evolution.
             - 'pso', Particle Swarm Optimization.
+            - 'cpso', Competitive Particle Swarm Optimization.
             - 'cmaes', Covariance Matrix Adaptation - Evolution Strategy.
         xstart : None or ndarray, optional, default None
             Initial positions of the population or mean (if solver = 'cmaes').
@@ -508,6 +124,10 @@ class Evolutionary:
             Sociability parameter. Only used when solver = 'pso'.
         l : scalar, optional, default 0.1
             Velocity clamping percentage. Only used when solver = 'pso'.
+        alpha : scalar, optional, default 1.25
+            Competitivity parameter. Only used when solver = 'cpso'.
+        delta : None or scalar, optional, default None
+            Swarm maximum radius. Only used when solver = 'cpso'.
         F : scalar, optional, default 1.
             Differential weight. Only used when solver = 'de'.
         CR : scalar, optional, default 0.5
@@ -565,8 +185,8 @@ class Evolutionary:
         >>> xopt, gfit = ea.optimize(solver = "cmaes")
         """
         # Check input
-        if not isinstance(solver, str) or solver not in [ "pso", "de", "cmaes" ]:
-            raise ValueError("solver must either be 'pso', 'de' or 'cmaes', got %s" % solver)
+        if not isinstance(solver, str) or solver not in [ "cpso", "pso", "de", "cmaes" ]:
+            raise ValueError("solver must either be 'cpso', 'pso', 'de' or 'cmaes', got %s" % solver)
         
         # Initialize
         self._solver = solver
@@ -574,8 +194,11 @@ class Evolutionary:
         
         # Solve
         if solver is "pso":
-            xopt, gfit = self._pso(w = w, c1 = c1, c2 = c2, xstart = xstart,
-                                   snap = snap)
+            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, alpha = 0.,
+                                   xstart = xstart, snap = snap)
+        elif solver is "cpso":
+            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, alpha = alpha,
+                                   delta = delta, xstart = xstart, snap = snap)
         elif solver is "de":
             xopt, gfit = self._de(F = F, CR = CR, xstart = xstart, snap = snap)
         elif solver is "cmaes":
@@ -624,7 +247,7 @@ class Evolutionary:
         # Check inputs
         if self._popsize <= 2:
             self._popsize = 3
-            raise Warning("popsize cannot be lower than 3 for DE, popsize set to 3")
+            warn("\npopsize cannot be lower than 3 for DE, popsize set to 3", UserWarning)
         if not isinstance(F, float) and not isinstance(F, int) or not 0. <= F <= 2.:
             raise ValueError("F must be an integer or float in [ 0, 2 ], got %s" % F)
         if not isinstance(CR, float) and not isinstance(CR, int) or not 0. <= CR <= 1.:
@@ -736,10 +359,11 @@ class Evolutionary:
             self._energy = self._energy[:,:it]
         return xopt, gfit
         
-    def _pso(self, w = 0.72, c1 = 1.49, c2 = 1.49, l = 0.1, xstart = None,
-             snap = False):
+    def _cpso(self, w = 0.72, c1 = 1.49, c2 = 1.49, l = 0.1, alpha = 1.25,
+             delta = None, xstart = None, snap = False):
         """
-        Minimize an objective function using Particle Swarm Optimization (PSO).
+        Minimize an objective function using Competitive Particle Swarm
+        Optimization (CPSO). Set alpha = 0. for classical PSO.
         
         Parameters
         ----------
@@ -751,6 +375,10 @@ class Evolutionary:
             Sociability parameter.
         l : scalar, optional, default 0.1
             Velocity clamping percentage.
+        alpha : scalar, optional, default 1.25
+            Competitivity parameter.
+        delta : None or scalar, optional, default None
+            Swarm maximum radius.
         xstart : None or ndarray, optional, default None
             Initial positions of the population.
         snap : bool, optional, default False
@@ -772,6 +400,10 @@ class Evolutionary:
                Networks, 1995, 4: 1942-1948
         .. [2] F. Van Den Bergh, *An analysis of particle swarm optimizers*,
                University of Pretoria, 2001
+        .. [3] K. Luu, M. Noble and A. Gesret, *A competitive particle swarm
+               optimization for nonlinear first arrival traveltime tomography*,
+               In SEG Technical Program Expanded Abstracts 2016 (pp. 2740-2744).
+               Society of Exploration Geophysicists.
         """
         # Check inputs
         if not isinstance(w, float) and not isinstance(w, int) or not 0. <= w <= 1.:
@@ -780,6 +412,12 @@ class Evolutionary:
             raise ValueError("c1 must be an integer or float in [ 0, 4 ], got %s" % c1)
         if not isinstance(c2, float) and not isinstance(c2, int) or not 0. <= c2 <= 4.:
             raise ValueError("c2 must be an integer or float in [ 0, 4 ], got %s" % c2)
+        if not isinstance(l, float) and not isinstance(l, int) or not 0. < l <= 1.:
+            raise ValueError("l must be an integer or float in ] 0, 1 ], got %s" % l)
+        if not isinstance(alpha, float) and not isinstance(alpha, int) or not 0. <= alpha <= 2.:
+            raise ValueError("alpha must be an integer or float in [ 0, 2 ], got %s" % alpha)
+        if not isinstance(delta, type(None)) and not isinstance(delta, float) and not isinstance(delta, int) and not delta > 0.:
+            raise ValueError("delta must be None, a positive integer or float, got %s" % delta)
         if xstart is not None and isinstance(xstart, np.ndarray) \
             and xstart.shape != (self._n_dim, self._popsize):
             raise ValueError("xstart must be a ndarray of shape (n_dim, popsize)")
@@ -805,9 +443,8 @@ class Evolutionary:
             V[:,i] = vmax * (2. * np.random.rand(self._n_dim) - 1.)
         
         # Compute fitness
-        for i in range(self._popsize):
-            pfit[i] = self._func(X[:,i])
-            self._n_eval += 1
+        pfit = np.array([ self._func(X[:,i]) for i in range(self._popsize) ])
+        self._n_eval += self._popsize
         pbestfit = np.array(pfit)
         if snap:
             self._init_models()
@@ -818,6 +455,10 @@ class Evolutionary:
         gbidx = np.argmin(pbestfit)
         gfit = pbestfit[gbidx]
         gbest = np.array(X[:,gbidx])
+        
+        # Swarm maximum radius
+        if delta is None:
+            delta = 0.08686 * np.log(1. + 0.004 * self._popsize)
         
         # Iterate until one of the termination criterion is satisfied
         it = 1
@@ -839,9 +480,8 @@ class Evolutionary:
                     X[masku,i] = self._upper[masku]
             
             # Compute fitness
-            for i in range(self._popsize):
-                pfit[i] = self._func(X[:,i])
-                self._n_eval += 1
+            pfit = np.array([ self._func(X[:,i]) for i in range(self._popsize) ])
+            self._n_eval += self._popsize
             
             # Update particle best position
             idx = pfit < pbestfit
@@ -873,6 +513,32 @@ class Evolutionary:
             else:
                 gbest = np.array(pbest[:,gbidx])
                 gfit = pbestfit[gbidx]
+                
+            # Competitive PSO algorithm
+            if alpha > 0.:
+                # Evaluate swarm size
+                swarm_radius = np.max([ np.linalg.norm(X[:,i] - gbest)
+                                        for i in range(self._popsize) ])
+                swarm_radius /= np.linalg.norm(self._upper-self._lower)
+                
+                # Restart particles if swarm size is lower than threshold
+                if swarm_radius < delta:
+                    # Rank particles
+                    inorm = it / self._max_iter
+                    ls = -1. / 0.09
+                    nw = int((self._popsize-1.) / (1.+np.exp(-ls*(inorm-alpha+0.5))))
+                    idx = pbestfit.argsort()[:-nw-1:-1]
+                    
+                    # Reset positions, velocities and personal bests
+                    V[:,idx] = np.array([ vmax*(2.*np.random.rand(self._n_dim)-1.)
+                                            for i in range(nw) ]).transpose()
+                    X[:,idx] = np.array([ self._random_model()
+                                            for i in range(nw) ]).transpose()
+                    pbest[:,idx] = np.array(X[:,idx])
+                    
+                    # Reset personal best fits
+                    pbestfit[idx] = np.array([ self._func(pbest[:,i]) for i in idx ])
+                    self._n_eval += nw
                 
         self._xopt = np.array(xopt)
         self._gfit = gfit

@@ -5,7 +5,7 @@ StochOPy
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.1.2
+:Version: 1.2.0
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -29,7 +29,8 @@ or optimization of an objective function:
 
 * Differential Evolution [3]
 * Particle Swarm Optimization [4,5]
-* Covariance Matrix Adaptation - Evolution Strategy [6]
+* Competitive Particle Swarm Optimization [6]
+* Covariance Matrix Adaptation - Evolution Strategy [7]
 
 
 Installation
@@ -101,6 +102,12 @@ Optimization is just as easy:
     xopt, gfit = ea.optimize(solver = "cmaes")
     print(xopt)
     print(gfit)
+    
+    
+Related works
+=============
+
+* `StochANNPy <https://github.com/keurfonluu/stochannpy>`__: StochANNPy (STOCHAstic Artificial Neural Network for PYthon) provides user-friendly routines compatible with Scikit-Learn for stochastic learning.
 
 
 References
@@ -116,5 +123,9 @@ References
        of ICNN'95 - International Conference on Neural Networks, 1995, 4: 1942-1948
 .. [5] F. Van Den Bergh, *An analysis of particle swarm optimizers*, University
        of Pretoria, 2001
-.. [6] N. Hansen, *The CMA evolution strategy: A tutorial*, Inria, Université
+.. [6] K. Luu, M. Noble and A. Gesret, *A competitive particle swarm
+       optimization for nonlinear first arrival traveltime tomography*, In SEG
+       Technical Program Expanded Abstracts 2016 (pp. 2740-2744). Society of
+       Exploration Geophysicists.
+.. [7] N. Hansen, *The CMA evolution strategy: A tutorial*, Inria, Université
        Paris-Saclay, LRI, 2011, 102: 1-34

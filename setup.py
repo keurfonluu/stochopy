@@ -38,4 +38,6 @@ if __name__ == "__main__":
         version = stochopy.__version__,
         packages = find_packages(),
         include_package_data = True,
+        test_suite = "nose.collector",
+        tests_require = [ "nose" ],
     )
