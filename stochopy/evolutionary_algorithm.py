@@ -688,8 +688,8 @@ class Evolutionary:
                 idx = np.logical_and(ti, np.abs(tx) > 3. * max( 1., np.sqrt(self._n_dim/mueff) ) \
                                      * sigma * np.sqrt(np.diag(C)))
                 idx = np.logical_and(idx, np.sign(tx) == np.sign(xmean - xold))
-                bnd_weights = np.array([ w*1.2**min(1., mueff/10./self._n_dim)
-                                            for i, w in zip(idx, bnd_weights) if i ])
+                bnd_weights = np.array([ w*1.2**min(1., mueff/10./self._n_dim) if i else w
+                                            for i, w in zip(idx, bnd_weights) ])
                         
             # Calculate scaling biased to unity, product is one
             bnd_scale = np.exp( 0.9 * ( np.log(np.diag(C)) - np.mean(np.log(np.diag(C))) ) )
