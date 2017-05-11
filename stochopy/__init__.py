@@ -12,4 +12,4 @@ from .monte_carlo import MonteCarlo
 from .evolutionary_algorithm import Evolutionary
 
 __all__ = [ "MonteCarlo", "Evolutionary" ]
-__version__ = "1.2.0"
+__version__ = "1.2.1"

@@ -257,24 +257,16 @@ class Evolutionary:
             raise ValueError("xstart must be a ndarray of shape (n_dim, popsize)")
         
         # Population initial positions
-        X = np.zeros((self._n_dim, self._popsize))
         if xstart is None:
-            for i in range(self._popsize):
-                X[:,i] = self._random_model()
+            X = np.array([ self._random_model()
+                            for i in range(self._popsize) ]).transpose()
         else:
             X = np.array(xstart)
         
-        # Initialize population
-        V = np.zeros((self._n_dim, self._popsize))
-        U = np.zeros((self._n_dim, self._popsize))
-        pfit = np.zeros(self._popsize)
-        self._n_eval = 0
-        
         # Compute fitness
-        for i in range(self._popsize):
-            pfit[i] = self._func(X[:,i])
-            self._n_eval += 1
+        pfit = np.array([ self._func(X[:,i]) for i in range(self._popsize) ])
         pbestfit = np.array(pfit)
+        self._n_eval = self._popsize
         if snap:
             self._init_models()
             self._models[:,:,0] = np.array(X)
@@ -293,32 +285,29 @@ class Evolutionary:
             r1 = np.random.rand(self._n_dim, self._popsize)
             
             # Mutation
-            for i in range(self._popsize):
-                idx = np.random.permutation(self._popsize)[:4]
-                idx = idx[idx != i]
-                x1 = np.array(X[:,idx[0]])
-                x2 = np.array(X[:,idx[1]])
-                x3 = np.array(X[:,idx[2]])
-                V[:,i] = x1 + F * (x2 - x3)
-                if self._clip:
-                    maskl = V[:,i] < self._lower
-                    masku = V[:,i] > self._upper
-                    V[maskl,i] = self._lower[maskl]
-                    V[masku,i] = self._upper[masku]
+            idx = [ np.random.permutation(self._popsize)[:4] for i in range(self._popsize) ]
+            idx = np.array([ a[a != i][:3] for i, a in enumerate(idx) ])
+            X1 = np.array([ X[:,i] for i in idx[:,0] ])
+            X2 = np.array([ X[:,i] for i in idx[:,1] ])
+            X3 = np.array([ X[:,i] for i in idx[:,2] ])
+            V = ( X1 + F * (X2 - X3) ).transpose()
+            if self._clip:
+                maskl = V < self._lower[:,None]
+                masku = V > self._upper[:,None]
+                V[maskl] = np.tile(self._lower[:,None], self._popsize)[maskl]
+                V[masku] = np.tile(self._upper[:,None], self._popsize)[masku]
             
             # Recombination
             irand = np.random.randint(self._n_dim)
-            for i in range(self._popsize):
-                for j in range(self._n_dim):
-                    if r1[j,i] <= CR or j == irand:
-                        U[j,i] = V[j,i]
-                    else:
-                        U[j,i] = X[j,i]
+            mask = np.zeros_like(r1, dtype = bool)
+            mask[irand,:] = True
+            mask = np.logical_or(mask, r1 <= CR)
+            U = np.array(X)
+            U[mask] = V[mask]
             
             # Compute fitness
-            for i in range(self._popsize):
-                pfit[i] = self._func(U[:,i])
-                self._n_eval += 1
+            pfit = np.array([ self._func(U[:,i]) for i in range(self._popsize) ])
+            self._n_eval += self._popsize
             
             # Selection
             idx = pfit < pbestfit
@@ -423,29 +412,22 @@ class Evolutionary:
             raise ValueError("xstart must be a ndarray of shape (n_dim, popsize)")
         
         # Particles initial positions
-        X = np.zeros((self._n_dim, self._popsize))
         if xstart is None:
-            for i in range(self._popsize):
-                X[:,i] = self._random_model()
+            X = np.array([ self._random_model()
+                            for i in range(self._popsize) ]).transpose()
         else:
             X = np.array(xstart)
-        
-        # Initialize swarm
-        V = np.zeros((self._n_dim, self._popsize))
         pbest = np.array(X)
-        pfit = np.zeros(self._popsize)
-        pbestfit = np.zeros(self._popsize)
-        self._n_eval = 0
         
         # Initialize particle velocity
         vmax = l * (self._upper - self._lower)
-        for i in range(self._popsize):
-            V[:,i] = vmax * (2. * np.random.rand(self._n_dim) - 1.)
+        V = np.array([ vmax * (2. * np.random.rand(self._n_dim) - 1.)
+                        for i in range(self._popsize) ]).transpose()
         
         # Compute fitness
         pfit = np.array([ self._func(X[:,i]) for i in range(self._popsize) ])
-        self._n_eval += self._popsize
         pbestfit = np.array(pfit)
+        self._n_eval = self._popsize
         if snap:
             self._init_models()
             self._models[:,:,0] = np.array(X)
@@ -469,15 +451,13 @@ class Evolutionary:
             r2 = np.random.rand(self._n_dim, self._popsize)
             
             # Update swarm
-            for i in range(self._popsize):
-                V[:,i] = w*V[:,i] + c1*r1[:,i]*(pbest[:,i]-X[:,i]) \
-                                  + c2*r2[:,i]*(gbest-X[:,i])       # Update particle velocity
-                X[:,i] = X[:,i] + V[:,i]                            # Update particle position
-                if self._clip:
-                    maskl = X[:,i] < self._lower
-                    masku = X[:,i] > self._upper
-                    X[maskl,i] = self._lower[maskl]
-                    X[masku,i] = self._upper[masku]
+            V = w * V + c1 * r1 * (pbest - X) + c2 * r2 * (gbest[:,None] - X)
+            X += V
+            if self._clip:
+                maskl = X < self._lower[:,None]
+                masku = X > self._upper[:,None]
+                X[maskl] = np.tile(self._lower[:,None], self._popsize)[maskl]
+                X[masku] = np.tile(self._upper[:,None], self._popsize)[masku]
             
             # Compute fitness
             pfit = np.array([ self._func(X[:,i]) for i in range(self._popsize) ])
@@ -636,8 +616,8 @@ class Evolutionary:
         dfithist = np.array([ 1. ])
         
         # (mu, lambda)-CMA-ES
-        it = 0
         self._n_eval = 0
+        it = 0
         eigeneval = 0
         arx = np.zeros((self._n_dim, self._popsize))
         arxvalid = np.zeros((self._n_dim, self._popsize))
@@ -653,19 +633,18 @@ class Evolutionary:
             it += 1
             
             # Generate lambda offsprings
-            for k in range(self._popsize):
-                arx[:,k] = xmean + sigma * np.dot(B, D*np.random.randn(self._n_dim))
-                arxvalid[:,k] = np.array(arx[:,k])
-                if self._clip:
-                    maskl = arxvalid[:,k] < self._lower
-                    masku = arxvalid[:,k] > self._upper
-                    arxvalid[maskl,k] = self._lower[maskl]
-                    arxvalid[masku,k] = self._upper[masku]
+            arx = np.array([ xmean + sigma * np.dot(B, D*np.random.randn(self._n_dim))
+                            for i in range(self._popsize) ]).transpose()
+            arxvalid = np.array(arx)
+            if self._clip:
+                maskl = arxvalid < self._lower[:,None]
+                masku = arxvalid > self._upper[:,None]
+                arxvalid[maskl] = np.tile(self._lower[:,None], self._popsize)[maskl]
+                arxvalid[masku] = np.tile(self._upper[:,None], self._popsize)[masku]
                 
             # Evaluate fitness
-            for k in range(self._popsize):
-                arfitness[k] = self._func(arxvalid[:,k])
-                self._n_eval += 1
+            arfitness = np.array([ self._func(arxvalid[:,i]) for i in range(self._popsize) ])
+            self._n_eval += self._popsize
             if snap:
                 self._models[:,:,it-1] = np.array(arx)
                 self._energy[:,it-1] = np.array(arfitness)
@@ -709,9 +688,8 @@ class Evolutionary:
                 idx = np.logical_and(ti, np.abs(tx) > 3. * max( 1., np.sqrt(self._n_dim/mueff) ) \
                                      * sigma * np.sqrt(np.diag(C)))
                 idx = np.logical_and(idx, np.sign(tx) == np.sign(xmean - xold))
-                for i in range(self._n_dim):
-                    if idx[i]:
-                        bnd_weights[i] *= 1.2**min(1., mueff/10./self._n_dim)
+                bnd_weights = np.array([ w*1.2**min(1., mueff/10./self._n_dim)
+                                            for i, w in zip(idx, bnd_weights) if i ])
                         
             # Calculate scaling biased to unity, product is one
             bnd_scale = np.exp( 0.9 * ( np.log(np.diag(C)) - np.mean(np.log(np.diag(C))) ) )
@@ -732,17 +710,22 @@ class Evolutionary:
                  + np.sqrt( cs * ( 2. - cs ) * mueff ) * np.dot(invsqrtC, xmean - xold) / sigma
             if np.linalg.norm(ps) / np.sqrt( 1. - ( 1. - cs )**(2.*self._n_eval/self._popsize) ) / chind < 1.4 + 2. / ( self._n_dim + 1. ):
                 hsig = 1.
+                pc = ( 1. - cc ) * pc \
+                     + np.sqrt( cc * ( 2. - cc ) * mueff ) * (xmean - xold) / sigma
             else:
                 hsig = 0.
-            pc = ( 1. - cc ) * pc \
-                 + hsig * np.sqrt( cc * ( 2. - cc ) * mueff ) * (xmean - xold) / sigma
+                pc = ( 1. - cc ) * pc
                  
             # Adapt covariance matrix C
             artmp = ( arx[:,arindex[:mu]] - np.tile(xold[:,None], mu) ) / sigma
-            C = ( 1. - c1 - cmu ) * C \
-                + c1 * ( np.dot(pc[:,None], pc[None,:]) \
-                         + ( 1. - hsig ) * cc * ( 2. - cc ) * C ) \
-                + cmu * np.dot(np.dot(artmp, np.diag(weights)), np.transpose(artmp))
+            if hsig:
+                C = ( 1. - c1 - cmu ) * C \
+                    + c1 * np.dot(pc[:,None], pc[None,:]) \
+                    + cmu * np.dot(np.dot(artmp, np.diag(weights)), np.transpose(artmp))
+            else:
+                C = ( 1. - c1 - cmu ) * C \
+                    + c1 * ( np.dot(pc[:,None], pc[None,:]) + cc * ( 2. - cc ) * C ) \
+                    + cmu * np.dot(np.dot(artmp, np.diag(weights)), np.transpose(artmp))
                 
             # Adapt step size sigma
             sigma *= np.exp( ( cs / damps ) * ( np.linalg.norm(ps) / chind - 1. ) )

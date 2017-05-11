@@ -205,9 +205,8 @@ class MonteCarlo:
         gfit : scalar
             Energy of the MAP model.
         """
-        for i in range(self._max_iter):
-            self._models[:,i] = self._random_model()
-            self._energy[i] = self._func(self._models[:,i])
+        self._models = np.array([ self._random_model() for i in range(self._max_iter) ]).transpose()
+        self._energy = np.array([ self._func(self._models[:,i]) for i in range(self._max_iter) ])
         return self._best_model()
         
     def _hastings(self, stepsize = 1., xstart = None):
