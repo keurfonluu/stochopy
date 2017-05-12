@@ -117,13 +117,13 @@ class Evolutionary:
         xstart : None or ndarray, optional, default None
             Initial positions of the population or mean (if solver = 'cmaes').
         w : scalar, optional, default 0.72
-            Inertial weight. Only used when solver = 'pso'.
+            Inertial weight. Only used when solver = {'pso', 'cpso'}.
         c1 : scalar, optional, default 1.49
-            Cognition parameter. Only used when solver = 'pso'.
+            Cognition parameter. Only used when solver = {'pso', 'cpso'}.
         c2 : scalar, optional, default 1.49
-            Sociability parameter. Only used when solver = 'pso'.
+            Sociability parameter. Only used when solver = {'pso', 'cpso'}.
         l : scalar, optional, default 0.1
-            Velocity clamping percentage. Only used when solver = 'pso'.
+            Velocity clamping percentage. Only used when solver = {'pso', 'cpso'}.
         gamma : scalar, optional, default 1.25
             Competitivity parameter. Only used when solver = 'cpso'.
         delta : None or scalar, optional, default None
