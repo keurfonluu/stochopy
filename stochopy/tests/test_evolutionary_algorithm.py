@@ -78,10 +78,10 @@ class EvolutionaryTest(unittest.TestCase):
         c1 = 1.409
         c2 = 1.991
         l = 0.26
-        alpha = 0.8
+        gamma = 0.8
         delta = 0.1
         xopt, gfit = self.optimizer.optimize(solver = "cpso", w = w, c1 = c1,
-                                             c2 = c2, l = l, alpha = alpha,
+                                             c2 = c2, l = l, gamma = gamma,
                                              delta = delta)
         xopt_true = np.array([ 1.55029923, 2.41509888 ])
         for i, val in enumerate(xopt):
@@ -95,12 +95,12 @@ class EvolutionaryTest(unittest.TestCase):
         w = 0.
         c1 = 0.
         c2 = 0.
-        alpha = 0.
+        gamma = 0.
         self.optimizer.optimize(solver = "pso", w = w, c1 = c1, c2 = c2, 
                                 xstart = xstart, snap = True)
         pso_models = self.optimizer.models[:,:,-1]
         self.optimizer.optimize(solver = "cpso", w = w, c1 = c1, c2 = c2,
-                                xstart = xstart, alpha = alpha, snap = True)
+                                xstart = xstart, gamma = gamma, snap = True)
         cpso_models = self.optimizer.models[:,:,-1]
         for i, val in enumerate(cpso_models.ravel()):
             self.assertEqual(val, pso_models.ravel()[i])

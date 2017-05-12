@@ -98,7 +98,7 @@ class Evolutionary:
         return
     
     def optimize(self, solver = "cpso", xstart = None, w = 0.72, c1 = 1.49,
-                 c2 = 1.49, l = 0.1, alpha = 1.25, delta = None, F = 1., CR = 0.5,
+                 c2 = 1.49, l = 0.1, gamma = 1.25, delta = None, F = 1., CR = 0.5,
                  sigma = 1., mu_perc = 0.5, snap = False):
         """
         Minimize an objective function using Differential Evolution (DE),
@@ -124,7 +124,7 @@ class Evolutionary:
             Sociability parameter. Only used when solver = 'pso'.
         l : scalar, optional, default 0.1
             Velocity clamping percentage. Only used when solver = 'pso'.
-        alpha : scalar, optional, default 1.25
+        gamma : scalar, optional, default 1.25
             Competitivity parameter. Only used when solver = 'cpso'.
         delta : None or scalar, optional, default None
             Swarm maximum radius. Only used when solver = 'cpso'.
@@ -194,10 +194,10 @@ class Evolutionary:
         
         # Solve
         if solver is "pso":
-            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, alpha = 0.,
+            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, gamma = 0.,
                                    xstart = xstart, snap = snap)
         elif solver is "cpso":
-            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, alpha = alpha,
+            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, gamma = gamma,
                                    delta = delta, xstart = xstart, snap = snap)
         elif solver is "de":
             xopt, gfit = self._de(F = F, CR = CR, xstart = xstart, snap = snap)
@@ -348,11 +348,11 @@ class Evolutionary:
             self._energy = self._energy[:,:it]
         return xopt, gfit
         
-    def _cpso(self, w = 0.72, c1 = 1.49, c2 = 1.49, l = 0.1, alpha = 1.25,
+    def _cpso(self, w = 0.72, c1 = 1.49, c2 = 1.49, l = 0.1, gamma = 1.25,
              delta = None, xstart = None, snap = False):
         """
         Minimize an objective function using Competitive Particle Swarm
-        Optimization (CPSO). Set alpha = 0. for classical PSO.
+        Optimization (CPSO). Set gamma = 0. for classical PSO.
         
         Parameters
         ----------
@@ -364,7 +364,7 @@ class Evolutionary:
             Sociability parameter.
         l : scalar, optional, default 0.1
             Velocity clamping percentage.
-        alpha : scalar, optional, default 1.25
+        gamma : scalar, optional, default 1.25
             Competitivity parameter.
         delta : None or scalar, optional, default None
             Swarm maximum radius.
@@ -403,8 +403,8 @@ class Evolutionary:
             raise ValueError("c2 must be an integer or float in [ 0, 4 ], got %s" % c2)
         if not isinstance(l, float) and not isinstance(l, int) or not 0. < l <= 1.:
             raise ValueError("l must be an integer or float in ] 0, 1 ], got %s" % l)
-        if not isinstance(alpha, float) and not isinstance(alpha, int) or not 0. <= alpha <= 2.:
-            raise ValueError("alpha must be an integer or float in [ 0, 2 ], got %s" % alpha)
+        if not isinstance(gamma, float) and not isinstance(gamma, int) or not 0. <= gamma <= 2.:
+            raise ValueError("gamma must be an integer or float in [ 0, 2 ], got %s" % gamma)
         if not isinstance(delta, type(None)) and not isinstance(delta, float) and not isinstance(delta, int) and not delta > 0.:
             raise ValueError("delta must be None, a positive integer or float, got %s" % delta)
         if xstart is not None and isinstance(xstart, np.ndarray) \
@@ -495,7 +495,7 @@ class Evolutionary:
                 gfit = pbestfit[gbidx]
                 
             # Competitive PSO algorithm
-            if alpha > 0.:
+            if gamma > 0.:
                 # Evaluate swarm size
                 swarm_radius = np.max([ np.linalg.norm(X[:,i] - gbest)
                                         for i in range(self._popsize) ])
@@ -506,7 +506,7 @@ class Evolutionary:
                     # Rank particles
                     inorm = it / self._max_iter
                     ls = -1. / 0.09
-                    nw = int((self._popsize-1.) / (1.+np.exp(-ls*(inorm-alpha+0.5))))
+                    nw = int((self._popsize-1.) / (1.+np.exp(-ls*(inorm-gamma+0.5))))
                     idx = pbestfit.argsort()[:-nw-1:-1]
                     
                     # Reset positions, velocities and personal bests
