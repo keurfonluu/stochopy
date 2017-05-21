@@ -10,6 +10,7 @@ License: MIT
 
 from .monte_carlo import MonteCarlo
 from .evolutionary_algorithm import Evolutionary
+from .benchmark_functions import BenchmarkFunction
 
-__all__ = [ "MonteCarlo", "Evolutionary" ]
-__version__ = "1.2.3"
+__all__ = [ "MonteCarlo", "Evolutionary", "BenchmarkFunction" ]
+__version__ = "1.3.0"
