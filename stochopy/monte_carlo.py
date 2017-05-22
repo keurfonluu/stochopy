@@ -168,11 +168,11 @@ class MonteCarlo:
         self._init_models()
         
         # Sample
-        if sampler is "pure":
+        if sampler == "pure":
             xopt, gfit = self._pure()
-        elif sampler is "hastings":
+        elif sampler == "hastings":
             xopt, gfit = self._hastings(stepsize = stepsize, xstart = xstart)
-        elif sampler is "hamiltonian":
+        elif sampler == "hamiltonian":
             xopt, gfit = self._hamiltonian(fprime = fprime,
                                            stepsize = stepsize,
                                            n_leap = n_leap,

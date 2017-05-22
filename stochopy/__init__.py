@@ -11,6 +11,7 @@ License: MIT
 from .monte_carlo import MonteCarlo
 from .evolutionary_algorithm import Evolutionary
 from .benchmark_functions import BenchmarkFunction
+from .gui import StochOGUI
 
-__all__ = [ "MonteCarlo", "Evolutionary", "BenchmarkFunction" ]
+__all__ = [ "MonteCarlo", "Evolutionary", "BenchmarkFunction", "StochOGUI" ]
 __version__ = "1.3.0"

@@ -10,7 +10,6 @@ License: MIT
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import animation
 
 __all__ = [ "BenchmarkFunction" ]
 
@@ -120,58 +119,3 @@ class BenchmarkFunction:
         ax1.grid(True)
         plt.show()
         return ax1
-    
-    def animate(self, models, energy, interval = 100, nx = 101, ny = 101,
-                n_levels = 10, yscale = "linear", repeat = True, kwargs = {}):
-        gfit = self._gfit(energy)
-        fig = plt.figure(figsize = (13, 6), facecolor = "white")
-        fig.canvas.mpl_connect("button_press_event", self._onClick)
-        self.ax1 = fig.add_subplot(1, 2, 1)
-        self.ax2 = fig.add_subplot(1, 2, 2)
-        self.plot(axes = self.ax1, kwargs = kwargs)
-        self.scatplot, = self.ax1.plot([], [], linestyle = "none",
-                                  marker = "o",
-                                  markersize = 12,
-                                  markerfacecolor = "white",
-                                  markeredgecolor = "black")
-        self.ax2.plot(gfit, linestyle = "-.", linewidth = 1, color = "black")
-        self.enerplot, = self.ax2.plot([], [], linestyle = "-", linewidth = 2,
-                                color = "red")
-        self.ax1.set_xlim(self._lower[0], self._upper[0])
-        self.ax1.set_ylim(self._lower[1], self._upper[1])
-        self.ax2.set_xlim((0, len(gfit)))
-        self.ax2.set_yscale(yscale)
-        self.ax2.set_xlabel("Iteration")
-        self.ax2.set_ylabel("Global best fitness")
-        self.ax2.grid(True)
-        
-        self.anim_running = True
-        self.anim = animation.FuncAnimation(fig, self._update,
-                                            fargs = (models, gfit),
-                                            frames = models.shape[-1]+1,
-                                            interval = interval,
-                                            repeat = repeat,
-                                            blit = True)
-        plt.show()
-        return
-    
-    def _update(self, i, models, gfit):
-        self.scatplot.set_data(models[0,:,i], models[1,:,i])
-        self.enerplot.set_xdata(np.arange(i+1))
-        self.enerplot.set_ydata(gfit[:i+1])
-        self.ax2.set_xlabel("Iteration %d" % (i+1))
-        return self.scatplot, self.enerplot,
-    
-    def _gfit(self, energy):
-        gfit = [ energy[:,0].min() ]
-        for i in range(1, energy.shape[1]):
-            gfit.append(min(gfit[i-1], energy[:,i].min()))
-        return np.array(gfit)
-    
-    def _onClick(self, event):
-        if self.anim_running:
-            self.anim.event_source.stop()
-            self.anim_running = False
-        else:
-            self.anim.event_source.start()
-            self.anim_running = True

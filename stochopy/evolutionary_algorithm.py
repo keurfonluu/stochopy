@@ -193,15 +193,15 @@ class Evolutionary:
         self._init_models()
         
         # Solve
-        if solver is "pso":
+        if solver == "pso":
             xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, gamma = 0.,
                                    xstart = xstart, snap = snap)
-        elif solver is "cpso":
+        elif solver == "cpso":
             xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, gamma = gamma,
                                    delta = delta, xstart = xstart, snap = snap)
-        elif solver is "de":
+        elif solver == "de":
             xopt, gfit = self._de(F = F, CR = CR, xstart = xstart, snap = snap)
-        elif solver is "cmaes":
+        elif solver == "cmaes":
             xopt, gfit = self._cmaes(sigma = sigma, mu_perc = mu_perc,
                                      snap = snap)
         return xopt, gfit
