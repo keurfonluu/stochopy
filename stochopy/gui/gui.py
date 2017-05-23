@@ -1,0 +1,534 @@
+# -*- coding: utf-8 -*-
+
+"""
+StochOPy Viewer is a GUI for StochOPy to see how popular stochastic algorithms
+perform on different benchmark functions.
+
+Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
+License: MIT
+"""
+
+import matplotlib
+matplotlib.use('TkAgg')
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+from matplotlib import animation
+
+import numpy as np
+from ..evolutionary_algorithm import Evolutionary
+from ..monte_carlo import MonteCarlo
+from ..benchmark_functions import BenchmarkFunction
+
+import sys
+if sys.version_info[0] < 3:
+    import Tkinter as tk
+    import tkFileDialog as tkfile
+    import tkMessageBox as tkmessage
+    from ttk import *
+    import tkFont as font
+    FileNotFoundError = IOError
+else:
+    import tkinter as tk
+    import tkinter.filedialog as tkfile
+    import tkinter.messagebox as tkmessage
+    from tkinter.ttk import *
+    from tkinter import font
+    
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+__all__ = [ "StochOGUI", "main" ]
+
+
+class StochOGUI():
+    
+    master = None
+    anim_running = False
+    first_run = True
+    
+    MAX_SEED = 999999
+    FUNCOPT = ( "Ackley", "Quartic", "Quartic noise", "Rastrigin", "Rosenbrock",
+                "Sphere", "Styblinski-Tang" )
+    SOLVOPT = ( "CPSO", "PSO", "DE", "CMAES", "Hastings", "Hamiltonian" )
+    
+    def __init__(self, master, ncolumn = 2):
+        self.nc = ncolumn
+        self.master = master
+        master.title("StochOPy Viewer")
+        master.protocol("WM_DELETE_WINDOW", self.close_window)
+        master.geometry("900x600")
+        master.minsize(900, 600)
+        master.maxsize(900, 600)
+        
+        default_font = font.nametofont("TkDefaultFont")
+        default_font.configure(family = "Helvetica", size = 9)
+        master.option_add("*Font", default_font)
+        
+        self.define_variables()
+        self.trace_variables()
+        self.init_variables()
+        self.menubar()
+        self.frame1()
+        self.frame2()
+        self.footer()
+        self.select_widget(self.solver_name.get())
+        
+    def about(self):
+        about = "StochOPy Viewer 1.0" + "\n" \
+                + "Created by Keurfon Luu"
+        tkmessage.showinfo("About", about)
+        
+    def menubar(self):
+        menubar = tk.Menu(self.master)
+        
+        # File
+        filemenu = tk.Menu(menubar, tearoff = 0)
+        filemenu.add_command(label = "Export models", command = self.export_models)
+        filemenu.add_command(label = "Export fitness", command = self.export_fitness)
+        filemenu.add_separator()
+        filemenu.add_command(label = "Exit", command = self.close_window)
+        
+        # Help
+        helpmenu = tk.Menu(menubar, tearoff = 0)
+        helpmenu.add_command(label = "About", command = self.about)
+        
+        # Display menu bar
+        menubar.add_cascade(label = "File", menu = filemenu)
+        menubar.add_cascade(label = "Help", menu = helpmenu)
+        self.master.config(menu = menubar)
+        
+    def frame1(self):
+        self.frame1 = tk.LabelFrame(self.master, text = "Parameters", borderwidth = 2, relief = "groove")
+        self.frame1.place(bordermode = "outside", relwidth = 0.99, relheight = 0.21, relx = 0, x = 5, y = 5, anchor = "nw")
+        self.frame1.first_run = True
+        
+        # function
+        function_label = tk.Label(self.frame1, text = "Function")
+        function_option_menu = tk.OptionMenu(self.frame1, self.function, *sorted(self.FUNCOPT))
+        
+        # max_iter
+        max_iter_label = tk.Label(self.frame1, text = "Maximum number of iterations")
+        max_iter_spinbox = tk.Spinbox(self.frame1, from_ = 1, to_ = 999999,
+                                      increment = 1, textvariable = self.max_iter,
+                                      justify = "right")
+        
+        # seed
+        seed_button = tk.Checkbutton(self.frame1, text = "Fix seed", variable = self.fix_seed)
+        seed_spinbox = tk.Spinbox(self.frame1, from_ = 0, to_ = self.MAX_SEED,
+                                  increment = 1, textvariable = self.seed,
+                                  justify = "right")
+        
+        # fps
+        fps_label = tk.Label(self.frame1, text = "Delay between frames (ms)")
+        fps_spinbox = tk.Spinbox(self.frame1, from_ = 1, to_ = 1000,
+                                 increment = 1, textvariable = self.interval,
+                                 justify = "right")
+        
+        # solver
+        solver_label = tk.Label(self.frame1, text = "Solver")
+        
+        solver_option_menu = tk.OptionMenu(self.frame1, self.solver_name, *self.SOLVOPT,
+                                           command = self.select_widget)
+        
+        # popsize
+        popsize_label = tk.Label(self.frame1, text = "Population size")
+        popsize_spinbox = tk.Spinbox(self.frame1, from_ = 1, to_ = 1000,
+                                     increment = 1, textvariable = self.popsize,
+                                     justify = "right")
+        
+        # clip
+        clip_button = tk.Checkbutton(self.frame1, text = "Clip to edges", variable = self.clip)
+        
+        # Layout
+        function_label.place(relx = 0., x = 5, y = 5, anchor = "nw")
+        function_option_menu.place(relx = 0., x = 60, anchor = "nw")
+        max_iter_label.place(relx = 0., x = 5, y = 30, anchor = "nw")
+        max_iter_spinbox.place(width = 60, relx = 0., x = 180, y = 30, anchor = "nw")
+        fps_label.place(relx = 0., x = 5, y = 55, anchor = "nw")
+        fps_spinbox.place(width = 60, relx = 0., x = 180, y = 55, anchor = "nw")
+        seed_button.place(relx = 0., x = 5, y = 80, anchor = "nw")
+        seed_spinbox.place(width = 60, relx = 0., x = 180, y = 80, anchor = "nw")
+        solver_label.place(relx = 0.3, x = 0, y = 5, anchor = "nw")
+        solver_option_menu.place(relx = 0.3, x = 50, anchor = "nw")
+        popsize_label.place(relx = 0.3, x = 0, y = 55, anchor = "nw")
+        popsize_spinbox.place(width = 60, relx = 0.3, x = 100, y = 55, anchor = "nw")
+        clip_button.place(relx = 0.3, x = 0, y = 80, anchor = "nw")
+    
+    def frame2(self):
+        self.frame2 = tk.Frame(self.master, borderwidth = 2, relief = "groove")
+        self.frame2.place(bordermode = "outside", relwidth = 0.99, relheight = 0.72, relx = 0, rely = 0.22, x = 5, y = 5, anchor = "nw")
+        self.frame2_in = tk.Frame(self.frame2, borderwidth = 0)
+        self.frame2_in.place(relwidth = 1, relheight = 1, relx = 0, anchor = "nw")
+        self.fig = Figure(figsize = (13, 6), facecolor = "white")
+        self.canvas = FigureCanvasTkAgg(self.fig, master = self.frame2_in)
+        self.fig.canvas.mpl_connect("button_press_event", self._onClick)
+        self.canvas.get_tk_widget().pack()
+        
+    def init_widget(self):
+        if not self.frame1.first_run:
+            self.frame1_in.forget()
+        else:
+            self.frame1.first_run = False
+        self.frame1_in = tk.Frame(self.frame1, borderwidth = 0)
+        self.frame1_in.place(relwidth = 0.5, relheight = 1., relx = 0.5, anchor = "nw")
+        
+    def select_widget(self, solver):
+        if solver == "CPSO":
+            self.cpso_widget()
+        elif solver == "PSO":
+            self.pso_widget()
+        elif solver == "DE":
+            self.de_widget()
+        elif solver == "CMAES":
+            self.cmaes_widget()
+        elif solver == "Hastings":
+            self.hastings_widget()
+        elif solver == "Hamiltonian":
+            self.hamiltonian_widget()
+            
+    def _label(self, text, position):
+        label = tk.Label(self.frame1_in, text = text)
+        if position == 1:
+            label.place(relx = 0, x = 0, y = 5, anchor = "nw")
+        elif position == 2:
+            label.place(relx = 0, x = 0, y = 50, anchor = "nw")
+        elif position == 3:
+            label.place(relx = 0.5, x = 0, y = 5, anchor = "nw")
+        elif position == 4:
+            label.place(relx = 0.5, x = 0, y = 50, anchor = "nw")
+        return label
+            
+    def _scale(self, from_, to_, resolution, variable, position, kwargs = {}):
+        scale = tk.Scale(self.frame1_in, from_ = from_, to_ = to_,
+                         resolution = resolution, variable = variable,
+                         showvalue = 0, orient = "horizontal", borderwidth = 1,
+                         width = 15, sliderlength = 20, sliderrelief = "ridge",
+                         **kwargs)
+        if position == 1:
+            scale.place(relwidth = 0.35, relx = 0, x = 0, y = 25, anchor = "nw")
+        elif position == 2:
+            scale.place(relwidth = 0.35, relx = 0, x = 0, y = 70, anchor = "nw")
+        elif position == 3:
+            scale.place(relwidth = 0.35, relx = 0.5, x = 0, y = 25, anchor = "nw")
+        elif position == 4:
+            scale.place(relwidth = 0.35, relx = 0.5, x = 0, y = 70, anchor = "nw")
+        return scale
+    
+    def _entry(self, variable, position):
+        entry = tk.Entry(self.frame1_in, textvariable = variable, justify = "right")
+        if position == 1:
+            entry.place(relwidth = 0.1, relx = 0.35, x = -3, y = 26, anchor = "nw")
+        elif position == 2:
+            entry.place(relwidth = 0.1, relx = 0.35, x = -3, y = 71, anchor = "nw")
+        elif position == 3:
+            entry.place(relwidth = 0.1, relx = 0.85, x = -3, y = 26, anchor = "nw")
+        elif position == 4:
+            entry.place(relwidth = 0.1, relx = 0.85, x = -3, y = 71, anchor = "nw")
+        return entry
+        
+    def pso_widget(self):
+        # Initialize widget
+        self.init_widget()
+        
+        # Omega
+        self._label("Inertial weight", 1)
+        self._scale(0., 1., 0.01, self.w, 1)
+        self._entry(self.w, 1)
+        
+        # C1
+        self._label("Cognition parameter", 2)
+        self._scale(0., 4., 0.01, self.c1, 2)
+        self._entry(self.c1, 2)
+        
+        # C2
+        self._label("Sociability parameter", 3)
+        self._scale(0., 4., 0.01, self.c2, 3)
+        self._entry(self.c2, 3)
+        
+    def cpso_widget(self):
+        # Initialize widget
+        self.pso_widget()
+        
+        # Gamma
+        self._label("Competitivity parameter", 4)
+        self._scale(0., 2., 0.01, self.gamma, 4)
+        self._entry(self.gamma, 4)
+        
+    def de_widget(self):
+        # Initialize widget
+        self.init_widget()
+        
+        # CR
+        self._label("Crossover probability", 1)
+        self._scale(0., 1., 0.01, self.CR, 1)
+        self._entry(self.CR, 1)
+
+        # F
+        self._label("Differential weight", 2)
+        self._scale(0., 2., 0.01, self.F, 2)
+        self._entry(self.F, 2)
+        
+    def cmaes_widget(self):
+        # Initialize widget
+        self.init_widget()
+        
+        # sigma
+        self._label("Sigma", 1)
+        self._scale(0.01, 10., 0.01, self.sigma, 1)
+        self._entry(self.sigma, 1)
+        
+        # mu_perc
+        self._label("Percentage of offspring", 2)
+        self._scale(0.01, 1., 0.01, self.mu_perc, 2)
+        self._entry(self.mu_perc, 2)
+        
+    def hastings_widget(self):
+        # Initialize widget
+        self.init_widget()
+        
+        # stepsize
+        self._label("Step size", 1)
+        ss = self._scale(-5., 1., 0.1, None, 1, dict(command = self._log_scale))
+        ss.set(np.log10(self.stepsize.get()))
+        self._entry(self.stepsize, 1)
+        
+    def hamiltonian_widget(self):
+        # Initialize widget
+        self.hastings_widget()
+        
+        # Leap
+        self._label("Number of leap frog steps", 2)
+        self._scale(1, 100, 1, self.n_leap, 2)
+        self._entry(self.n_leap, 2)
+        
+    def _log_scale(self, val):
+        self.stepsize.set(10.**float(val))
+    
+    def footer(self):
+        # Run button
+        run_button = tk.Button(self.master, text = "Run", command = self.run)
+
+        # Exit button
+        exit_button = tk.Button(self.master, text = "Exit", command = self.close_window)
+
+        # Layout
+        run_button.place(relwidth = 0.1, relx = 0.9, rely = 1, x = -5, y = -5, anchor = "se")
+        exit_button.place(relwidth = 0.1, relx = 1, rely = 1, x = -5, y = -5, anchor = "se")
+        
+    def run(self):
+        # To avoid errors when clicking in the window
+        if self.first_run:
+            self.first_run = False
+            
+        # To ensure repeatability if needed
+        if not self.fix_seed.get():
+            self.seed.set(np.random.randint(self.MAX_SEED))
+        np.random.seed(self.seed.get())
+        
+        # Initialize function
+        func = "_".join(self.function.get().split()).lower()
+        self.bf = BenchmarkFunction(func, n_dim = 2)
+        
+        # Solve
+        solver_name = self.solver_name.get().lower()
+        if solver_name in [ "hastings", "hamiltonian" ]:
+            self.solver = MonteCarlo(**self.bf.get(), max_iter = self.max_iter.get())
+            self.solver.sample(sampler = solver_name,
+                               stepsize = self.stepsize.get(),
+                               n_leap = self.n_leap.get())
+        elif solver_name in [ "cpso", "pso", "de", "cmaes" ]:
+            self.solver = Evolutionary(**self.bf.get(),
+                                       popsize = self.popsize.get(),
+                                       max_iter = self.max_iter.get(),
+                                       clip = self.clip.get())
+            self.solver.optimize(solver = solver_name, snap = True,
+                                 w = self.w.get(),
+                                 c1 = self.c1.get(),
+                                 c2 = self.c2.get(),
+                                 gamma = self.gamma.get(),
+                                 CR = self.CR.get(),
+                                 F = self.F.get(),
+                                 sigma = self.sigma.get(),
+                                 mu_perc = self.mu_perc.get())
+            
+        # Animate
+        self.animate(interval = self.interval.get(), yscale = "log")
+        
+    def animate(self, interval = 100, nx = 101, ny = 101,
+                n_levels = 10, yscale = "linear", repeat = True, kwargs = {}):
+        if self.anim_running:
+            self.anim.event_source.stop()
+        self.fig.clear()
+        models = self.solver.models
+        if self.solver._solver in [ "hastings", "hamiltonian" ]:
+            func = self._update_monte_carlo
+            gfit = self.solver.energy
+            linestyle = "--"
+            xlabel = "Sample number"
+            ylabel = "Fitness"
+        elif self.solver._solver in [ "cpso", "pso", "de", "cmaes" ]:
+            func = self._update_evolutionary
+            gfit = self._gfit(self.solver.energy)
+            linestyle = "none"
+            xlabel = "Iteration number"
+            ylabel = "Global best fitness"
+        ax1 = self.fig.add_subplot(1, 2, 1)
+        ax2 = self.fig.add_subplot(1, 2, 2)
+        self.bf.plot(axes = ax1, kwargs = kwargs)
+        self.scatplot, = ax1.plot([], [], linestyle = linestyle, color = "black",
+                                  marker = "o",
+                                  markersize = 12,
+                                  markerfacecolor = "white",
+                                  markeredgecolor = "black")
+        ax2.plot(gfit, linestyle = "-.", linewidth = 1, color = "black")
+        self.enerplot, = ax2.plot([], [], linestyle = "-", linewidth = 2,
+                                  color = "red")
+        ax1.set_xlim(self.bf._lower[0], self.bf._upper[0])
+        ax1.set_ylim(self.bf._lower[1], self.bf._upper[1])
+        ax2.set_xlim((0, len(gfit)))
+        ax2.set_yscale(yscale)
+        ax2.set_xlabel(xlabel)
+        ax2.set_ylabel(ylabel)
+        ax2.grid(True)
+        
+        self.anim_running = True
+        self.anim = animation.FuncAnimation(self.fig, func,
+                                            fargs = (models, gfit),
+                                            frames = models.shape[-1],
+                                            interval = interval,
+                                            repeat = repeat,
+                                            blit = True)
+        self.fig.tight_layout()
+    
+    def _update_monte_carlo(self, i, models, gfit):
+        self.scatplot.set_data(models[0,:i], models[1,:i])
+        self.enerplot.set_xdata(np.arange(i+1))
+        self.enerplot.set_ydata(gfit[:i+1])
+        return self.scatplot, self.enerplot,
+    
+    def _update_evolutionary(self, i, models, gfit):
+        self.scatplot.set_data(models[0,:,i], models[1,:,i])
+        self.enerplot.set_xdata(np.arange(i+1))
+        self.enerplot.set_ydata(gfit[:i+1])
+        return self.scatplot, self.enerplot,
+    
+    def _gfit(self, energy):
+        gfit = [ energy[:,0].min() ]
+        for i in range(1, energy.shape[1]):
+            gfit.append(min(gfit[i-1], energy[:,i].min()))
+        return np.array(gfit)
+    
+    def _onClick(self, event):
+        if not self.first_run:
+            if self.anim_running:
+                self.anim.event_source.stop()
+                self.anim_running = False
+            else:
+                self.anim.event_source.start()
+                self.anim_running = True
+                
+    def export_models(self):
+        if self._check_run():
+            filename = tkfile.asksaveasfilename(title = "Export models",
+                                                filetypes = [ ("Pickle", ".pickle") ],
+                                                defaultextension = ".pickle")
+            if len(filename) > 0:
+                with open(filename, "wb") as f:
+                    pickle.dump(self.solver.models, f, protocol = pickle.HIGHEST_PROTOCOL)
+    
+    def export_fitness(self):
+        if self._check_run():
+            filename = tkfile.asksaveasfilename(title = "Export fitness",
+                                                filetypes = [ ("Pickle", ".pickle") ],
+                                                defaultextension = ".pickle")
+            if len(filename) > 0:
+                with open(filename, "wb") as f:
+                    pickle.dump(self.solver.energy, f, protocol = pickle.HIGHEST_PROTOCOL)
+    
+    def _check_run(self):
+        if self.first_run:
+            tkmessage.showerror("Error", "No optimization performed yet.")
+            return False
+        else:
+            return True
+        
+    def close_window(self):
+        yes = tkmessage.askyesno("Exit", "Do you really want to quit?")
+        if yes:
+            self.close()
+
+    def define_variables(self):
+        self.solver_name = tk.StringVar(self.master)
+        self.function = tk.StringVar(self.master)
+        self.popsize = tk.IntVar(self.master)
+        self.max_iter = tk.IntVar(self.master)
+        self.interval = tk.IntVar(self.master)
+        self.stepsize = tk.DoubleVar(self.master)
+        self.n_leap = tk.IntVar(self.master)
+        self.w = tk.DoubleVar(self.master)
+        self.c1 = tk.DoubleVar(self.master)
+        self.c2 = tk.DoubleVar(self.master)
+        self.gamma = tk.DoubleVar(self.master)
+        self.CR = tk.DoubleVar(self.master)
+        self.F = tk.DoubleVar(self.master)
+        self.sigma = tk.DoubleVar(self.master)
+        self.mu_perc = tk.DoubleVar(self.master)
+        self.seed = tk.IntVar(self.master)
+        self.fix_seed = tk.BooleanVar(self.master)
+        self.clip = tk.BooleanVar(self.master)
+    
+    def trace_variables(self):
+        self.solver_name.trace("w", self.callback)
+        self.function.trace("w", self.callback)
+        self.popsize.trace("w", self.callback)
+        self.max_iter.trace("w", self.callback)
+        self.interval.trace("w", self.callback)
+        self.stepsize.trace("w", self.callback)
+        self.n_leap.trace("w", self.callback)
+        self.w.trace("w", self.callback)
+        self.c1.trace("w", self.callback)
+        self.c2.trace("w", self.callback)
+        self.gamma.trace("w", self.callback)
+        self.CR.trace("w", self.callback)
+        self.F.trace("w", self.callback)
+        self.sigma.trace("w", self.callback)
+        self.mu_perc.trace("w", self.callback)
+        self.seed.trace("w", self.callback)
+        self.fix_seed.trace("w", self.callback)
+        self.clip.trace("w", self.callback)
+
+    def init_variables(self):
+        self.solver_name.set("CPSO")
+        self.function.set("Rosenbrock")
+        self.popsize.set(10)
+        self.max_iter.set(200)
+        self.interval.set(60)
+        self.stepsize.set(0.1)
+        self.n_leap.set(10)
+        self.w.set(0.72)
+        self.c1.set(1.49)
+        self.c2.set(1.49)
+        self.gamma.set(1.25)
+        self.CR.set(0.5)
+        self.F.set(1.)
+        self.sigma.set(1.)
+        self.mu_perc.set(0.5)
+        self.seed.set(np.random.randint(self.MAX_SEED))
+        self.fix_seed.set(False)
+        self.clip.set(False)
+    
+    def close(self):
+        self.master.quit()
+        self.master.destroy()
+        
+    def callback(self, *args):
+        pass
+   
+    
+def main():
+    root = tk.Tk()
+    root.resizable(0, 0)
+    StochOGUI(root)
+    root.mainloop()
