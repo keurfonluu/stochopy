@@ -34,12 +34,15 @@ class MonteCarlo:
         provided.
     max_iter : int, optional, default 1000
         Number of models to sample.
+    clip : bool, optional, default False
+        Accept sample only within search space.
     random_state : int, optional, default None
         Seed for random number generator.
     """
     
     def __init__(self, func, lower = None, upper = None, n_dim = 1,
-                 max_iter = 1000, random_state = None, args = (), kwargs = {}):
+                 max_iter = 1000, clip = False, random_state = None,
+                 args = (), kwargs = {}):
         # Check inputs
         if not hasattr(func, "__call__"):
             raise ValueError("func is not callable")
@@ -65,6 +68,10 @@ class MonteCarlo:
             raise ValueError("max_iter must be a positive integer, got %s" % max_iter)
         else:
             self._max_iter = max_iter
+        if not isinstance(clip, bool):
+            raise ValueError("clip must be either True or False, got %s" % clip)
+        else:
+            self._clip = clip
         if random_state is not None:
             np.random.seed(random_state)
         return
@@ -249,7 +256,8 @@ class MonteCarlo:
             self._energy[i] = self._func(self._models[:,i])
             
             log_alpha = min(0., self._energy[i-1] - self._energy[i])
-            if log_alpha < np.log(np.random.rand()):
+            if log_alpha < np.log(np.random.rand()) \
+                or not self._in_search_space(self._models[:,i]):
                 rejected += 1
                 self._models[:,i] = self._models[:,i-1]
                 self._energy[i] = self._energy[i-1]
@@ -344,7 +352,8 @@ class MonteCarlo:
             U = self._func(q)
             K = 0.5 * np.sum(p**2)
             log_alpha = min(0., U0 - U + K0 - K)
-            if log_alpha < np.log(np.random.rand()):
+            if log_alpha < np.log(np.random.rand()) \
+                or not self._in_search_space(self._models[:,i]):
                 rejected += 1
                 self._models[:,i] = self._models[:,i-1]
                 self._energy[i] = self._energy[i-1]
@@ -364,6 +373,12 @@ class MonteCarlo:
             x2[i] += delta
             grad[i] = 0.5 * ( self._func(x2) - self._func(x1) ) / delta
         return grad
+    
+    def _in_search_space(self, x):
+        if self._clip:
+            return np.logical_and(np.all(x <= self._upper), np.all(x >= self._lower))
+        else:
+            return True
     
     @property
     def models(self):

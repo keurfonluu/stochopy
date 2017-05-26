@@ -245,9 +245,9 @@ class Evolutionary:
                Spaces*, Journal of Global Optimization, 1997, 11(4): 341-359
         """
         # Check inputs
-        if self._popsize <= 2:
-            self._popsize = 3
-            warn("\npopsize cannot be lower than 3 for DE, popsize set to 3", UserWarning)
+        if self._popsize <= 3:
+            self._popsize = 4
+            warn("\npopsize cannot be lower than 4 for DE, popsize set to 4", UserWarning)
         if not isinstance(F, float) and not isinstance(F, int) or not 0. <= F <= 2.:
             raise ValueError("F must be an integer or float in [ 0, 2 ], got %s" % F)
         if not isinstance(CR, float) and not isinstance(CR, int) or not 0. <= CR <= 1.:
