@@ -2,7 +2,7 @@
 StochOPy
 ********
 
-.. figure:: examples/stochopy_viewer.png
+.. figure:: example/stochopy_viewer.png
 
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
