@@ -212,8 +212,8 @@ class StochOGUI():
         elif solver == "Hamiltonian":
             self.hamiltonian_widget()
             
-    def _label(self, text, position):
-        label = ttk.Label(self.frame1.sliders, text = text)
+    def _label(self, text, position, kwargs = {}):
+        label = ttk.Label(self.frame1.sliders, text = text, **kwargs)
         if position == 1:
             label.place(relx = 0, x = 0, y = 5, anchor = "nw")
         elif position == 2:
@@ -224,12 +224,13 @@ class StochOGUI():
             label.place(relx = 0.5, x = 0, y = 50, anchor = "nw")
         return label
             
-    def _scale(self, from_, to, resolution, variable, position, command = None):
+    def _scale(self, from_, to, resolution, variable, position, command = None,
+               kwargs = {}):
         if command is None:
             command = lambda s: variable.set(round(float(s), 3))
         scale = ttk.Scale(self.frame1.sliders, from_ = from_, to = to, variable = variable,
                           orient = "horizontal", length = 20, command = command,
-                          takefocus = False)
+                          takefocus = False, **kwargs)
         if position == 1:
             scale.place(relwidth = 0.35, relx = 0, x = 0, y = 25, anchor = "nw")
         elif position == 2:
@@ -240,9 +241,9 @@ class StochOGUI():
             scale.place(relwidth = 0.35, relx = 0.5, x = 0, y = 70, anchor = "nw")
         return scale
     
-    def _entry(self, variable, position):
+    def _entry(self, variable, position, kwargs = {}):
         entry = ttk.Entry(self.frame1.sliders, textvariable = variable, justify = "right",
-                          takefocus = True)
+                          takefocus = True, **kwargs)
         if position == 1:
             entry.place(width = 45, relx = 0.35, x = -3, y = 26, anchor = "nw")
         elif position == 2:
@@ -312,13 +313,15 @@ class StochOGUI():
     def hastings_widget(self):
         # Initialize widget
         self.init_widget()
+        vcmd = self.frame1.pop.register(self._validate_stepsize)
         
         # stepsize
         self._label("Step size", 1)
         ss = self._scale(-3., 1., 0.1, self.log_stepsize, 1,
                          lambda val: self.stepsize.set(round(10.**float(val), 3)))
         ss.set(np.log10(self.stepsize.get()))
-        self._entry(self.stepsize, 1)
+        self._entry(self.stepsize, 1, kwargs = dict(validate = "key",
+                                                    validatecommand = (vcmd, "%P")))
         
     def hamiltonian_widget(self):
         # Initialize widget
@@ -328,6 +331,13 @@ class StochOGUI():
         self._label("Number of leap frog steps", 2)
         self._scale(1, 100, 1, self.n_leap, 2, lambda val: self.n_leap.set(int(np.floor(float(val)))))
         self._entry(self.n_leap, 2)
+        
+    def _validate_stepsize(self, val):
+        try:
+            self.log_stepsize.set(np.log10(float(val)))
+        except ValueError:
+            pass
+        return True
         
     def footer(self):
         # Run button

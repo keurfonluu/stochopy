@@ -15,6 +15,20 @@ __all__ = [ "BenchmarkFunction" ]
 
 
 class BenchmarkFunction:
+    """
+    Benchmark functions.
+    
+    This class provides several benchmark functions to test global optimization
+    algorithms.
+    
+    Parameters
+    ----------
+    func: {'ackley', 'griewank', 'quartic', 'quartic_noise', 'rastrigin',
+           'rosenbrock', 'sphere', 'styblinski-tang'}
+        Benchmark function name.
+    n_dim: int, default 2
+        Number of dimensions.
+    """
     
     def __init__(self, func, n_dim = 2):
         self._n_dim = n_dim
@@ -62,6 +76,14 @@ class BenchmarkFunction:
             raise ValueError("unknown benchmark function '%s'" % func)
             
     def get(self):
+        """
+        Get the benchmark function.
+        
+        Returns
+        -------
+        dict: dictionary
+            Dictionary containing the function, the lower and upper boundaries.
+        """
         return dict(func = self._func, lower = self._lower, upper = self._upper)
 
     def _ackley(self, x):
@@ -103,6 +125,27 @@ class BenchmarkFunction:
     
     def plot(self, nx = 101, ny = 101, n_levels = 10, axes = None,
              figsize = (8, 8), kwargs = {}):
+        """
+        Plot the benchmark function in 2-D.
+        
+        Parameters
+        ----------
+        nx: int, default 101
+            Number of samples in the first dimension.
+        ny: int, default 101
+            Number of samples in the second dimension.
+        n_levels: int, default 10
+            Number of levels for contour.
+        axes: matplotlib axes or None, default None
+            Axes used for plot.
+        figsize: tuple, default (8, 8)
+            Figure width and height if axes is None.
+            
+        Returns
+        -------
+        ax1: matplotlib axes
+            Axes used for plot.
+        """
         if axes is None:
             fig = plt.figure(figsize = figsize, facecolor = "white")
             fig.patch.set_alpha(0.)

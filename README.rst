@@ -2,10 +2,12 @@
 StochOPy
 ********
 
+.. figure:: examples/stochopy_viewer.png
+
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.2.3
+:Version: 1.3.0
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -23,14 +25,14 @@ StochOPy provides routines for sampling of a model parameter space:
 
 * Pure Monte-Carlo
 * Metropolis-Hastings algorithm
-* Hamiltonian (Hybrid) Monte-Carlo [1,2]
+* Hamiltonian (Hybrid) Monte-Carlo [1]_ [2]_
               
 or optimization of an objective function:
 
-* Differential Evolution [3]
-* Particle Swarm Optimization [4,5]
-* Competitive Particle Swarm Optimization [6]
-* Covariance Matrix Adaptation - Evolution Strategy [7]
+* Differential Evolution [3]_
+* Particle Swarm Optimization [4]_ [5]_
+* Competitive Particle Swarm Optimization [6]_
+* Covariance Matrix Adaptation - Evolution Strategy [7]_
 
 
 Installation
@@ -102,6 +104,16 @@ Optimization is just as easy:
     xopt, gfit = ea.optimize(solver = "cmaes")
     print(xopt)
     print(gfit)
+
+
+**New in 1.3.0**: Run StochOPy Viewer to see how popular stochastic algorithm
+work, and play with the tuning parameters on several benchmark functions.
+
+.. code-block:: python
+
+  from stochopy.gui import main
+  
+  main()
     
     
 Related works
