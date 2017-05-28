@@ -419,7 +419,7 @@ class StochOGUI():
         # Initialize axis
         ax1 = self.fig.add_subplot(1, 2, 1)
         ax2 = self.fig.add_subplot(1, 2, 2)
-        self.bf.plot(axes = ax1, kwargs = kwargs)
+        self.bf.plot(axes = ax1, cont_kws = kwargs)
         self.scatplot, = ax1.plot([], [], linestyle = linestyle, color = "black",
                                   marker = "o",
                                   markersize = 12,

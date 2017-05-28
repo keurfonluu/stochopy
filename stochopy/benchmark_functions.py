@@ -10,6 +10,7 @@ License: MIT
 
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 __all__ = [ "BenchmarkFunction" ]
 
@@ -124,9 +125,10 @@ class BenchmarkFunction:
         return sum1 / 2.0 + 39.16599 * len(x)
     
     def plot(self, nx = 101, ny = 101, n_levels = 10, axes = None,
-             figsize = (8, 8), kwargs = {}):
+             figsize = (8, 8), projection = "2d", cmap = "viridis",
+             cont_kws = {}, surf_kws = {}):
         """
-        Plot the benchmark function in 2-D.
+        Plot the benchmark function in 2-D or 3-D.
         
         Parameters
         ----------
@@ -140,25 +142,50 @@ class BenchmarkFunction:
             Axes used for plot.
         figsize: tuple, default (8, 8)
             Figure width and height if axes is None.
+        cmap: str, default "viridis"
+            Colormap.
+        cont_kws: dict
+            Keyworded arguments passed to contour plot.
+        surf_kws: dict
+            Keyworded arguments passed to surface plot
             
         Returns
         -------
         ax1: matplotlib axes
             Axes used for plot.
         """
-        if axes is None:
-            fig = plt.figure(figsize = figsize, facecolor = "white")
-            fig.patch.set_alpha(0.)
-            ax1 = fig.add_subplot(1, 1, 1)
-        else:
-            ax1 = axes
         ax = np.linspace(self._lower[0], self._upper[0], nx)
         ay = np.linspace(self._lower[1], self._upper[1], ny)
         X, Y = np.meshgrid(ax, ay)
         funcgrid = np.array([ self._func([x, y]) for x, y
-                                in zip(X.ravel(), Y.ravel()) ]).reshape((nx, ny))
-        ax1.contourf(ax, ay, funcgrid, 100, **kwargs)
-        ax1.contour(ax, ay, funcgrid, n_levels, colors = "black", alpha = 0.3)
-        ax1.grid(True)
-        plt.show()
+                                    in zip(X.ravel(), Y.ravel()) ]).reshape((nx, ny))
+        if projection == "2d":
+            if axes is None:
+                fig = plt.figure(figsize = figsize, facecolor = "white")
+                fig.patch.set_alpha(0.)
+                ax1 = fig.add_subplot(1, 1, 1)
+            else:
+                ax1 = axes
+            ax1.contourf(ax, ay, funcgrid, 100, cmap = cmap, **cont_kws)
+            ax1.contour(ax, ay, funcgrid, n_levels, colors = "black", alpha = 0.3)
+            ax1.grid(True)
+        elif projection == "3d":
+            if axes is None:
+                fig = plt.figure(figsize = figsize, facecolor = "white")
+                fig.patch.set_alpha(0.)
+                ax1 = fig.add_subplot(1, 1, 1, projection = "3d")
+            else:
+                ax1 = axes
+            ax1.plot_surface(X, Y, funcgrid, rstride = 1, cstride = 1,
+                             linewidth = 0.5, shade = False, antialiased = False,
+                             cmap = cmap, **surf_kws)
+            ax1.contour(X, Y, funcgrid, n_levels, zdir = "Z", offset = 0.,
+                        cmap = cmap, **cont_kws)
+            ax1.axes.zaxis.set_ticklabels([])
+        else:
+            raise ValueError("Unknown projection %s" % projection)
+        ax1.set_xlabel("X1", fontsize = 12)
+        ax1.set_ylabel("X2", fontsize = 12)
+        ax1.set_xlim(self._lower[0], self._upper[0])
+        ax1.set_ylim(self._lower[1], self._upper[1])
         return ax1
