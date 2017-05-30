@@ -11,7 +11,8 @@ AUTHOR_EMAIL = "keurfon.luu@mines-paristech.fr"
 URL = "https://github.com/keurfonluu/stochopy"
 LICENSE = "MIT License"
 REQUIREMENTS = [
-    "numpy >= 1.9.0",
+    "numpy",
+    "matplotlib",
 ]
 CLASSIFIERS = [
     "Programming Language :: Python",

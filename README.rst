@@ -7,7 +7,7 @@ StochOPy
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.3.1
+:Version: 1.3.2
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -53,6 +53,16 @@ Otherwise, download and extract the package, then run:
 
 Usage
 =====
+
+**New in 1.3.0**: run StochOPy Viewer to see how popular stochastic algorithm
+work, and play with the tuning parameters on several benchmark functions.
+
+.. code-block:: python
+
+  from stochopy.gui import main
+  
+  main()
+  
 
 First, import StochOPy and define an objective function (here Rosenbrock):
 
@@ -104,16 +114,6 @@ Optimization is just as easy:
     xopt, gfit = ea.optimize(solver = "cmaes")
     print(xopt)
     print(gfit)
-
-
-**New in 1.3.0**: Run StochOPy Viewer to see how popular stochastic algorithm
-work, and play with the tuning parameters on several benchmark functions.
-
-.. code-block:: python
-
-  from stochopy.gui import main
-  
-  main()
     
     
 Related works

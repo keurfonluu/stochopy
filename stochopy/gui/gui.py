@@ -8,9 +8,6 @@ Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT
 """
 
-import matplotlib
-matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib import animation
 
@@ -180,6 +177,8 @@ class StochOGUI():
             popsize_spinbox.place(width = 60, relx = 0, x = 110, y = 0, anchor = "nw")
             
     def frame2(self):
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+        
         self.frame2 = ttk.Frame(self.master, borderwidth = 2, relief = "groove")
         self.frame2.place(bordermode = "outside", relwidth = 0.99, relheight = 0.72, relx = 0, rely = 0.22, x = 5, y = 5, anchor = "nw")
         self.frame2.canvas = ttk.Frame(self.frame2, borderwidth = 0)
@@ -334,7 +333,9 @@ class StochOGUI():
         
     def _validate_stepsize(self, val):
         try:
-            self.log_stepsize.set(np.log10(float(val)))
+            val = float(val)
+            if val > 0.:
+                self.log_stepsize.set(np.log10(val))
         except ValueError:
             pass
         return True
@@ -368,17 +369,17 @@ class StochOGUI():
             # Solve
             solver_name = self.solver_name.get().lower()
             if solver_name in [ "hastings", "hamiltonian" ]:
-                self.solver = MonteCarlo(**self.bf.get(),
-                                         max_iter = self.max_iter.get(),
-                                         clip = self.clip.get())
+                self.solver = MonteCarlo(max_iter = self.max_iter.get(),
+                                         clip = bool(self.clip.get()),
+                                         **self.bf.get())
                 self.solver.sample(sampler = solver_name,
                                    stepsize = self.stepsize.get(),
                                    n_leap = self.n_leap.get())
             elif solver_name in [ "cpso", "pso", "de", "cmaes" ]:
-                self.solver = Evolutionary(**self.bf.get(),
-                                           popsize = self.popsize.get(),
+                self.solver = Evolutionary(popsize = self.popsize.get(),
                                            max_iter = self.max_iter.get(),
-                                           clip = self.clip.get())
+                                           clip = bool(self.clip.get()),
+                                           **self.bf.get())
                 self.solver.optimize(solver = solver_name, snap = True,
                                      w = self.w.get(),
                                      c1 = self.c1.get(),
@@ -405,13 +406,11 @@ class StochOGUI():
             func = self._update_monte_carlo
             gfit = self.solver.energy
             linestyle = "--"
-            xlabel = "Sample number"
             ylabel = "Fitness"
         elif self.solver._solver in [ "cpso", "pso", "de", "cmaes" ]:
             func = self._update_evolutionary
             gfit = self._gfit(self.solver.energy)
             linestyle = "none"
-            xlabel = "Iteration number"
             ylabel = "Global best fitness"
         max_iter = len(gfit)
         it = np.linspace(1, max_iter, max_iter)
@@ -424,7 +423,8 @@ class StochOGUI():
                                   marker = "o",
                                   markersize = 12,
                                   markerfacecolor = "white",
-                                  markeredgecolor = "black")
+                                  markeredgecolor = "black",
+                                  animated = True)
         ax2.plot(it, gfit, linestyle = "-.", linewidth = 1, color = "black")
         self.enerplot, = ax2.plot([], [], linestyle = "-", linewidth = 2,
                                   color = "red")
@@ -434,9 +434,12 @@ class StochOGUI():
         ax1.set_ylim(self.bf._lower[1], self.bf._upper[1])
         ax2.set_xlim((1, max_iter))
         ax2.set_yscale(yscale)
-        ax2.set_xlabel(xlabel, fontsize = 12)
         ax2.set_ylabel(ylabel, fontsize = 12)
         ax2.grid(True)
+        self.iter = ax2.text(0.99, 0.99, "", va = "top", ha = "right",
+                             fontsize = 10,
+                             transform = ax2.transAxes,
+                             animated = True)
         
         # Animate
         self.anim_running = True
@@ -452,13 +455,15 @@ class StochOGUI():
         self.scatplot.set_data(models[0,:i], models[1,:i])
         self.enerplot.set_xdata(np.linspace(1, i+1, i+1))
         self.enerplot.set_ydata(gfit[:i+1])
-        return self.scatplot, self.enerplot,
+        self.iter.set_text("Sample %d" % (i+1))
+        return self.scatplot, self.enerplot, self.iter,
     
     def _update_evolutionary(self, i, models, gfit):
         self.scatplot.set_data(models[0,:,i], models[1,:,i])
         self.enerplot.set_xdata(np.linspace(1, i+1, i+1))
         self.enerplot.set_ydata(gfit[:i+1])
-        return self.scatplot, self.enerplot,
+        self.iter.set_text("Iteration %d" % (i+1))
+        return self.scatplot, self.enerplot, self.iter,
     
     def _gfit(self, energy):
         gfit = [ energy[:,0].min() ]
@@ -589,18 +594,18 @@ def main():
     """
     Start StochOPy Viewer window.
     """
-    import tempfile
-    import base64
-    import zlib
-    
-    ICON = zlib.decompress(base64.b64decode('eJxjYGAEQgEBBiDJwZDBy'
-                                            'sAgxsDAoAHEQCEGBQaIOAg4sDIgACMUj4JRMApGwQgF/ykEAFXxQRc='))
-    _, ICON_PATH = tempfile.mkstemp()
-    with open(ICON_PATH, "wb") as icon_file:
-        icon_file.write(ICON)
+    import matplotlib
+    matplotlib.use("TkAgg")
+    from sys import platform as _platform
     
     root = tk.Tk()
     root.resizable(0, 0)
-    root.iconbitmap(default = ICON_PATH)
     StochOGUI(root)
+    s = ttk.Style()
+    if _platform == "win32":
+        s.theme_use("vista")
+    elif _platform in [ "linux", "linux2" ]:
+        s.theme_use("alt")
+    elif _platform == "darwin":
+        s.theme_use("aqua")
     root.mainloop()

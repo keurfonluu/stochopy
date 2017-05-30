@@ -125,7 +125,7 @@ class BenchmarkFunction:
         return sum1 / 2.0 + 39.16599 * len(x)
     
     def plot(self, nx = 101, ny = 101, n_levels = 10, axes = None,
-             figsize = (8, 8), projection = "2d", cmap = "viridis",
+             figsize = (8, 8), projection = "2d", cmap = None,
              cont_kws = {}, surf_kws = {}):
         """
         Plot the benchmark function in 2-D or 3-D.
@@ -154,6 +154,8 @@ class BenchmarkFunction:
         ax1: matplotlib axes
             Axes used for plot.
         """
+        if cmap is None:
+            cmap = self._set_cmap()
         ax = np.linspace(self._lower[0], self._upper[0], nx)
         ay = np.linspace(self._lower[1], self._upper[1], ny)
         X, Y = np.meshgrid(ax, ay)
@@ -189,3 +191,10 @@ class BenchmarkFunction:
         ax1.set_xlim(self._lower[0], self._upper[0])
         ax1.set_ylim(self._lower[1], self._upper[1])
         return ax1
+    
+    def _set_cmap(self):
+        import matplotlib.cm as cm
+        if hasattr(cm, "viridis"):
+            return "viridis"
+        else:
+            return "jet"

@@ -652,7 +652,7 @@ class Evolutionary:
                 
             # Handle boundaries by penalizing fitness
             # Get delta fitness values
-            perc = np.percentile(arfitness, [ 25, 75 ], interpolation = "midpoint")
+            perc = np.percentile(arfitness, [ 25, 75 ])
             delta = ( perc[1] - perc[0] ) / self._n_dim / np.mean(np.diag(C)) / sigma**2
             
             # Catch non-sensible values

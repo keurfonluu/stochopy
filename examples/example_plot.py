@@ -8,8 +8,6 @@ Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT
 """
 
-import sys
-sys.path.append("../")
 import matplotlib.pyplot as plt
 try:
     from stochopy import Evolutionary, BenchmarkFunction
@@ -27,7 +25,7 @@ if __name__ == "__main__":
     bf = BenchmarkFunction(func, n_dim = 2)
     
     # Initialize solver
-    ea = Evolutionary(**bf.get(), popsize = 5, max_iter = 200)
+    ea = Evolutionary(popsize = 5, max_iter = 200, **bf.get())
     
     # Solve
     xopt, gfit = ea.optimize(solver = "cpso", snap = True)
