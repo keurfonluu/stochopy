@@ -91,8 +91,8 @@ class MonteCarlo:
             - 'hastings', random-walk with a gaussian perturbation.
             - 'hamiltonian', propose a new sample simulated with hamiltonian
               dynamics.
-        stepsize : scalar, optional, default 1.
-            If sampler = 'pure', 'xstart' is not used.
+        stepsize : scalar or ndarray, optional, default 1.
+            If sampler = 'pure', 'stepsize' is not used.
             If sampler = 'hastings', standard deviation of gaussian
             perturbation.
             If sampler = 'hamiltonian', leap-frog step size.
@@ -167,8 +167,19 @@ class MonteCarlo:
         if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.ndarray)) \
             and len(xstart) != self._n_dim:
             raise ValueError("xstart must be a list or ndarray of length n_dim")
-        if not isinstance(stepsize, float) and not isinstance(stepsize, int) or stepsize <= 0.:
-            raise ValueError("stepsize must be positive, got %s" % stepsize)
+        if sampler == "hastings":
+            if not isinstance(stepsize, (float, int, list, np.ndarray)):
+                raise ValueError("stepsize must be a float, integer, list or ndarray")
+            else:
+                if isinstance(stepsize, (float, int)) and stepsize <= 0.:
+                    raise ValueError("stepsize must be positive, got %s" % stepsize)
+                elif isinstance(stepsize, (list, np.ndarray)) and np.any([ s <= 0 for s in stepsize ]):
+                    raise ValueError("elements in stepsize must be positive")
+                elif isinstance(stepsize, (list, np.ndarray)) and len(stepsize) != self._n_dim:
+                    raise ValueError("stepsize must be a list or ndarray of length n_dim")
+        elif sampler == "hamiltonian":
+            if not isinstance(stepsize, (float, int)) or stepsize <= 0.:
+                raise ValueError("stepsize must be positive, got %s" % stepsize)
         
         # Initialize
         self._solver = sampler
@@ -222,7 +233,7 @@ class MonteCarlo:
         
         Parameters
         ----------
-        stepsize : scalar, optional, default 1.
+        stepsize : scalar or ndarray, optional, default 1.
             Standard deviation of gaussian perturbation.
         xstart : None or ndarray, optional, default None
             First model of the Markov chain.

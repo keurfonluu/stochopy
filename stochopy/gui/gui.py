@@ -85,7 +85,7 @@ class StochOGUI():
         self.select_widget(self.solver_name.get())
         
     def about(self):
-        about = "StochOPy Viewer 1.0" + "\n" \
+        about = "StochOPy Viewer 1.1" + "\n" \
                 + "Created by Keurfon Luu"
         tkmessage.showinfo("About", about)
         
@@ -312,30 +312,66 @@ class StochOGUI():
     def hastings_widget(self):
         # Initialize widget
         self.init_widget()
-        vcmd = self.frame1.pop.register(self._validate_stepsize)
+        vcmd1 = self.frame1.pop.register(self._validate_mcmc_stepsize_x1)
+        vcmd2 = self.frame1.pop.register(self._validate_mcmc_stepsize_x2)
         
-        # stepsize
-        self._label("Step size", 1)
-        ss = self._scale(-3., 1., 0.1, self.log_stepsize, 1,
-                         lambda val: self.stepsize.set(round(10.**float(val), 3)))
-        ss.set(np.log10(self.stepsize.get()))
-        self._entry(self.stepsize, 1, kwargs = dict(validate = "key",
-                                                    validatecommand = (vcmd, "%P")))
+        # stepsize x1
+        self._label("Step size X1", 1)
+        ss = self._scale(-3., 1., 0.1, self.log_mcmc_stepsize_x1, 1,
+                         lambda val: self.mcmc_stepsize_x1.set(round(10.**float(val), 3)))
+        ss.set(np.log10(self.mcmc_stepsize_x1.get()))
+        self._entry(self.mcmc_stepsize_x1, 1, kwargs = dict(validate = "key",
+                                                            validatecommand = (vcmd1, "%P")))
+        
+        # stepsize x2
+        self._label("Step size X2", 2)
+        ss = self._scale(-3., 1., 0.1, self.log_mcmc_stepsize_x2, 2,
+                         lambda val: self.mcmc_stepsize_x2.set(round(10.**float(val), 3)))
+        ss.set(np.log10(self.mcmc_stepsize_x2.get()))
+        self._entry(self.mcmc_stepsize_x2, 2, kwargs = dict(validate = "key",
+                                                            validatecommand = (vcmd2, "%P")))
         
     def hamiltonian_widget(self):
         # Initialize widget
-        self.hastings_widget()
+        self.init_widget()
+        vcmd = self.frame1.pop.register(self._validate_hmc_stepsize)
+        
+        # stepsize
+        self._label("Step size", 1)
+        ss = self._scale(-3., 1., 0.1, self.log_hmc_stepsize, 1,
+                         lambda val: self.hmc_stepsize.set(round(10.**float(val), 3)))
+        ss.set(np.log10(self.hmc_stepsize.get()))
+        self._entry(self.hmc_stepsize, 1, kwargs = dict(validate = "key",
+                                                        validatecommand = (vcmd, "%P")))
         
         # Leap
         self._label("Number of leap frog steps", 2)
         self._scale(1, 100, 1, self.n_leap, 2, lambda val: self.n_leap.set(int(np.floor(float(val)))))
         self._entry(self.n_leap, 2)
-        
-    def _validate_stepsize(self, val):
+    
+    def _validate_mcmc_stepsize_x1(self, val):
         try:
             val = float(val)
             if val > 0.:
-                self.log_stepsize.set(np.log10(val))
+                self.log_mcmc_stepsize_x1.set(np.log10(val))
+        except ValueError:
+            pass
+        return True
+    
+    def _validate_mcmc_stepsize_x2(self, val):
+        try:
+            val = float(val)
+            if val > 0.:
+                self.log_mcmc_stepsize_x2.set(np.log10(val))
+        except ValueError:
+            pass
+        return True
+    
+    def _validate_hmc_stepsize(self, val):
+        try:
+            val = float(val)
+            if val > 0.:
+                self.log_hmc_stepsize.set(np.log10(val))
         except ValueError:
             pass
         return True
@@ -369,11 +405,15 @@ class StochOGUI():
             # Solve
             solver_name = self.solver_name.get().lower()
             if solver_name in [ "hastings", "hamiltonian" ]:
+                if solver_name == "hastings":
+                    stepsize = [ self.mcmc_stepsize_x1.get(), self.mcmc_stepsize_x2.get() ]
+                else:
+                    stepsize = self.hmc_stepsize.get()
                 self.solver = MonteCarlo(max_iter = self.max_iter.get(),
                                          clip = bool(self.clip.get()),
                                          **self.bf.get())
                 self.solver.sample(sampler = solver_name,
-                                   stepsize = self.stepsize.get(),
+                                   stepsize = stepsize,
                                    n_leap = self.n_leap.get())
             elif solver_name in [ "cpso", "pso", "de", "cmaes" ]:
                 self.solver = Evolutionary(popsize = self.popsize.get(),
@@ -516,8 +556,12 @@ class StochOGUI():
         self.popsize = tk.IntVar(self.master)
         self.max_iter = tk.IntVar(self.master)
         self.interval = tk.IntVar(self.master)
-        self.stepsize = tk.DoubleVar(self.master)
-        self.log_stepsize = tk.DoubleVar(self.master)
+        self.mcmc_stepsize_x1 = tk.DoubleVar(self.master)
+        self.mcmc_stepsize_x2 = tk.DoubleVar(self.master)
+        self.hmc_stepsize = tk.DoubleVar(self.master)
+        self.log_mcmc_stepsize_x1 = tk.DoubleVar(self.master)
+        self.log_mcmc_stepsize_x2 = tk.DoubleVar(self.master)
+        self.log_hmc_stepsize = tk.DoubleVar(self.master)
         self.n_leap = tk.IntVar(self.master)
         self.w = tk.DoubleVar(self.master)
         self.c1 = tk.DoubleVar(self.master)
@@ -537,8 +581,12 @@ class StochOGUI():
         self.popsize.trace("w", self.callback)
         self.max_iter.trace("w", self.callback)
         self.interval.trace("w", self.callback)
-        self.stepsize.trace("w", self.callback)
-        self.log_stepsize.trace("w", self.callback)
+        self.mcmc_stepsize_x1.trace("w", self.callback)
+        self.mcmc_stepsize_x2.trace("w", self.callback)
+        self.hmc_stepsize.trace("w", self.callback)
+        self.log_mcmc_stepsize_x1.trace("w", self.callback)
+        self.log_mcmc_stepsize_x2.trace("w", self.callback)
+        self.log_hmc_stepsize.trace("w", self.callback)
         self.n_leap.trace("w", self.callback)
         self.w.trace("w", self.callback)
         self.c1.trace("w", self.callback)
@@ -558,8 +606,12 @@ class StochOGUI():
         self.popsize.set(10)
         self.max_iter.set(200)
         self.interval.set(60)
-        self.stepsize.set(0.1)
-        self.log_stepsize.set(np.log10(self.stepsize.get()))
+        self.mcmc_stepsize_x1.set(0.1)
+        self.mcmc_stepsize_x2.set(0.1)
+        self.hmc_stepsize.set(0.1)
+        self.log_mcmc_stepsize_x1.set(np.log10(self.mcmc_stepsize_x1.get()))
+        self.log_mcmc_stepsize_x2.set(np.log10(self.mcmc_stepsize_x2.get()))
+        self.log_hmc_stepsize.set(np.log10(self.hmc_stepsize.get()))
         self.n_leap.set(10)
         self.w.set(0.72)
         self.c1.set(1.49)

@@ -10,6 +10,12 @@ License: MIT
 
 import numpy as np
 from warnings import warn
+try:
+    from mpi4py import MPI
+except ImportError:
+    mpi_exist = False
+else:
+    mpi_exist = True
 
 __all__ = [ "Evolutionary" ]
 
@@ -47,11 +53,18 @@ class Evolutionary:
         Clip to search space if an individual leave the search space.
     random_state : int, optional, default None
         Seed for random number generator.
+    mpi : bool, default False
+        Enable MPI parallelization.
+    args : tuple, default ()
+        Arguments to pass to objective function.
+    kwargs : dict, default {}
+        Keyworded arguments to pass to objective function.
     """
     
     def __init__(self, func, lower = None, upper = None, n_dim = 1,
                  popsize = 10, max_iter = 100, eps1 = 1e-8, eps2 = 1e-8,
-                 clip = False, random_state = None, args = (), kwargs = {}):
+                 clip = False, random_state = None, mpi = False,
+                 args = (), kwargs = {}):
         # Check inputs
         if not hasattr(func, "__call__"):
             raise ValueError("func is not callable")
@@ -95,6 +108,16 @@ class Evolutionary:
             self._clip = clip
         if random_state is not None:
             np.random.seed(random_state)
+        if not isinstance(mpi, bool):
+            raise ValueError("mpi must be either True or False, got %s" % mpi)
+        else:
+            self._mpi = mpi
+            if mpi and not mpi_exist:
+                raise ValueError("mpi4py is not installed or not properly installed")
+        if not isinstance(args, (list, tuple)):
+            raise ValueError("args must be a list or a tuple")
+        if not isinstance(kwargs, dict):
+            raise ValueError("kwargs must be a dictionary")
         return
     
     def optimize(self, solver = "cpso", xstart = None, w = 0.72, c1 = 1.49,
@@ -191,6 +214,13 @@ class Evolutionary:
         # Initialize
         self._solver = solver
         self._init_models()
+        if self._mpi:
+            self._mpi_comm = MPI.COMM_WORLD
+            self._mpi_rank = self._mpi_comm.Get_rank()
+            self._mpi_size = self._mpi_comm.Get_size()
+        else:
+            self._mpi_rank = 0
+            self._mpi_size = 1
         
         # Solve
         if solver == "pso":
@@ -213,6 +243,30 @@ class Evolutionary:
     
     def _random_model(self):
         return self._lower + np.random.rand(self._n_dim) * (self._upper - self._lower)
+    
+    def _eval_models(self, models):
+        n = models.shape[1]
+        if self._mpi:
+            fit = np.zeros(n)
+            fit_mpi = np.zeros_like(fit)
+            self._mpi_comm.Barrier()
+            self._mpi_comm.Bcast([ models, MPI.DOUBLE ], root = 0)
+            for i in np.arange(self._mpi_rank, n, self._mpi_size):
+                fit_mpi[i] = self._func(models[:,i])
+            self._mpi_comm.Barrier()
+            self._mpi_comm.Allreduce([ fit_mpi, MPI.DOUBLE ], [ fit, MPI.DOUBLE ],
+                                     op = MPI.SUM)
+        else:
+            fit = np.array([ self._func(models[:,i]) for i in range(n) ])
+        return fit
+    
+    def _clip_models(self, models):
+        if self._clip:
+            maskl = models < self._lower[:,None]
+            masku = models > self._upper[:,None]
+            models[maskl] = np.tile(self._lower[:,None], self._popsize)[maskl]
+            models[masku] = np.tile(self._upper[:,None], self._popsize)[masku]
+        return models
     
     def _de(self, F = 1., CR = 0.5, xstart = None, snap = False):
         """
@@ -264,7 +318,7 @@ class Evolutionary:
             X = np.array(xstart)
         
         # Compute fitness
-        pfit = np.array([ self._func(X[:,i]) for i in range(self._popsize) ])
+        pfit = self._eval_models(X)
         pbestfit = np.array(pfit)
         self._n_eval = self._popsize
         if snap:
@@ -291,11 +345,7 @@ class Evolutionary:
             X2 = np.array([ X[:,i] for i in idx[:,1] ])
             X3 = np.array([ X[:,i] for i in idx[:,2] ])
             V = ( X1 + F * (X2 - X3) ).transpose()
-            if self._clip:
-                maskl = V < self._lower[:,None]
-                masku = V > self._upper[:,None]
-                V[maskl] = np.tile(self._lower[:,None], self._popsize)[maskl]
-                V[masku] = np.tile(self._upper[:,None], self._popsize)[masku]
+            V = self._clip_models(V)
             
             # Recombination
             irand = np.random.randint(self._n_dim)
@@ -306,7 +356,7 @@ class Evolutionary:
             U[mask] = V[mask]
             
             # Compute fitness
-            pfit = np.array([ self._func(U[:,i]) for i in range(self._popsize) ])
+            pfit = self._eval_models(U)
             self._n_eval += self._popsize
             
             # Selection
@@ -425,7 +475,7 @@ class Evolutionary:
                         for i in range(self._popsize) ]).transpose()
         
         # Compute fitness
-        pfit = np.array([ self._func(X[:,i]) for i in range(self._popsize) ])
+        pfit = self._eval_models(X)
         pbestfit = np.array(pfit)
         self._n_eval = self._popsize
         if snap:
@@ -453,14 +503,10 @@ class Evolutionary:
             # Update swarm
             V = w * V + c1 * r1 * (pbest - X) + c2 * r2 * (gbest[:,None] - X)
             X += V
-            if self._clip:
-                maskl = X < self._lower[:,None]
-                masku = X > self._upper[:,None]
-                X[maskl] = np.tile(self._lower[:,None], self._popsize)[maskl]
-                X[masku] = np.tile(self._upper[:,None], self._popsize)[masku]
+            X = self._clip_models(X)
             
             # Compute fitness
-            pfit = np.array([ self._func(X[:,i]) for i in range(self._popsize) ])
+            pfit = self._eval_models(X)
             self._n_eval += self._popsize
             
             # Update particle best position
@@ -505,8 +551,7 @@ class Evolutionary:
                 if swarm_radius < delta:
                     # Rank particles
                     inorm = it / self._max_iter
-                    ls = -1. / 0.09
-                    nw = int((self._popsize-1.) / (1.+np.exp(-ls*(inorm-gamma+0.5))))
+                    nw = int((self._popsize-1.) / (1.+np.exp(1./0.09*(inorm-gamma+0.5))))
                     idx = pbestfit.argsort()[:-nw-1:-1]
                     
                     # Reset positions, velocities and personal bests
@@ -517,7 +562,7 @@ class Evolutionary:
                     pbest[:,idx] = np.array(X[:,idx])
                     
                     # Reset personal best fits
-                    pbestfit[idx] = np.array([ self._func(pbest[:,i]) for i in idx ])
+                    pbestfit[idx] = self._eval_models(pbest[:,idx])
                     self._n_eval += nw
                 
         self._xopt = np.array(xopt)
@@ -636,14 +681,10 @@ class Evolutionary:
             arx = np.array([ xmean + sigma * np.dot(B, D*np.random.randn(self._n_dim))
                             for i in range(self._popsize) ]).transpose()
             arxvalid = np.array(arx)
-            if self._clip:
-                maskl = arxvalid < self._lower[:,None]
-                masku = arxvalid > self._upper[:,None]
-                arxvalid[maskl] = np.tile(self._lower[:,None], self._popsize)[maskl]
-                arxvalid[masku] = np.tile(self._upper[:,None], self._popsize)[masku]
+            arxvalid = self._clip_models(arxvalid)
                 
             # Evaluate fitness
-            arfitness = np.array([ self._func(arxvalid[:,i]) for i in range(self._popsize) ])
+            arfitness = self._eval_models(arxvalid)
             self._n_eval += self._popsize
             if snap:
                 self._models[:,:,it-1] = np.array(arx)

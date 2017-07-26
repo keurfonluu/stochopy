@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-This example shows how to compute a traveltime grid using an Eikonal solver
-and to plot it.
+This example shows how to optimize and plot a benchmark function.
 
 Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT

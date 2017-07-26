@@ -7,7 +7,7 @@ StochOPy
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.3.2
+:Version: 1.4.0
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -54,7 +54,17 @@ Otherwise, download and extract the package, then run:
 Usage
 =====
 
-**New in 1.3.0**: run StochOPy Viewer to see how popular stochastic algorithm
+**New in 1.4.0**: added support for MPI for evolutionary algorithms (you may
+need to install the package `MPI4PY <https://github.com/mpi4py/mpi4py>`__ beforehand).  
+Run the example script inside the folder examples:
+
+.. code-block:: bash
+
+  mpiexec -n 4 python example_mpi.py
+  
+Note that StochOPy still work even though MPI4PY is not installed.
+  
+**New in 1.3.0**: run StochOPy Viewer to see how popular stochastic algorithms
 work, and play with the tuning parameters on several benchmark functions.
 
 .. code-block:: python
