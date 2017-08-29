@@ -24,10 +24,10 @@ if __name__ == "__main__":
     bf = BenchmarkFunction(func, n_dim = 2)
     
     # Initialize solver
-    ea = Evolutionary(popsize = 5, max_iter = 200, **bf.get())
+    ea = Evolutionary(popsize = 5, max_iter = 200, snap = True, **bf.get())
     
     # Solve
-    xopt, gfit = ea.optimize(solver = "cpso", snap = True)
+    ea.optimize(solver = "cpso")
     
     # Plot in 3D
     ax1 = bf.plot(figsize = (8, 6), projection = "3d")

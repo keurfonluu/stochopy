@@ -33,7 +33,7 @@ class EvolutionaryTest(unittest.TestCase):
         random_state = 42
         self.optimizer = Evolutionary(func, lower = lower, upper = upper,
                                       popsize = popsize, max_iter = max_iter,
-                                      random_state = random_state)
+                                      snap = True, random_state = random_state)
         self.n_dim = n_dim
         self.popsize = popsize
         
@@ -53,7 +53,7 @@ class EvolutionaryTest(unittest.TestCase):
         l = 0.26
         xopt, gfit = self.optimizer.optimize(solver = "pso", w = w, c1 = c1,
                                              c2 = c2, l = l)
-        xopt_true = np.array([ 1.55303664, 2.41138644 ])
+        xopt_true = np.array([ 1.46014373, 2.13358457 ])
         for i, val in enumerate(xopt):
             self.assertAlmostEqual(val, xopt_true[i])
             
@@ -61,14 +61,14 @@ class EvolutionaryTest(unittest.TestCase):
         """
         Checking PSO behaviour when all the parameters are set to 0.
         """
-        xstart = np.random.rand(self.n_dim, self.popsize)
+        xstart = np.random.rand(self.popsize, self.n_dim)
         w = 0.
         c1 = 0.
         c2 = 0.
         self.optimizer.optimize(solver = "pso", w = w, c1 = c1, c2 = c2,
-                                xstart = xstart, snap = True)
+                                xstart = xstart)
         for i, val in enumerate(self.optimizer.models[:,:,-1].ravel()):
-            self.assertEqual(val, xstart.ravel()[i])
+            self.assertAlmostEqual(val, xstart.ravel()[i])
             
     def test_cpso(self):
         """
@@ -83,7 +83,7 @@ class EvolutionaryTest(unittest.TestCase):
         xopt, gfit = self.optimizer.optimize(solver = "cpso", w = w, c1 = c1,
                                              c2 = c2, l = l, gamma = gamma,
                                              delta = delta)
-        xopt_true = np.array([ 1.55029923, 2.41509888 ])
+        xopt_true = np.array([ 1.46014373, 2.13358457 ])
         for i, val in enumerate(xopt):
             self.assertAlmostEqual(val, xopt_true[i])
             
@@ -91,19 +91,19 @@ class EvolutionaryTest(unittest.TestCase):
         """
         Checking CPSO behaviour when all the parameters are set to 0.
         """
-        xstart = np.random.rand(self.n_dim, self.popsize)
+        xstart = np.random.rand(self.popsize, self.n_dim)
         w = 0.
         c1 = 0.
         c2 = 0.
         gamma = 0.
         self.optimizer.optimize(solver = "pso", w = w, c1 = c1, c2 = c2, 
-                                xstart = xstart, snap = True)
+                                xstart = xstart)
         pso_models = self.optimizer.models[:,:,-1]
         self.optimizer.optimize(solver = "cpso", w = w, c1 = c1, c2 = c2,
-                                xstart = xstart, gamma = gamma, snap = True)
+                                xstart = xstart, gamma = gamma)
         cpso_models = self.optimizer.models[:,:,-1]
         for i, val in enumerate(cpso_models.ravel()):
-            self.assertEqual(val, pso_models.ravel()[i])
+            self.assertAlmostEqual(val, pso_models.ravel()[i])
             
     def test_de(self):
         """
@@ -112,7 +112,7 @@ class EvolutionaryTest(unittest.TestCase):
         CR = 0.42
         F = 1.491
         xopt, gfit = self.optimizer.optimize(solver = "de", CR = CR, F = F)
-        xopt_true = np.array([ 0.91537076, 0.83994809 ])
+        xopt_true = np.array([ 1.35183858, 1.81825907 ])
         for i, val in enumerate(xopt):
             self.assertAlmostEqual(val, xopt_true[i])
         
@@ -125,7 +125,7 @@ class EvolutionaryTest(unittest.TestCase):
         xstart = np.array([ -3., -3. ])
         xopt, gfit = self.optimizer.optimize(solver = "cmaes", sigma = sigma,
                                              mu_perc = mu_perc, xstart = xstart)
-        xopt_true = np.array([ -1.88212388,  3.55660952 ])
+        xopt_true = np.array([ -0.44198412, 0.24806027 ])
         for i, val in enumerate(xopt):
             self.assertAlmostEqual(val, xopt_true[i])
   

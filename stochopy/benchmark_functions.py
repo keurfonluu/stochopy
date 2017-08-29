@@ -170,7 +170,7 @@ class BenchmarkFunction:
                 ax1 = axes
             ax1.contourf(ax, ay, funcgrid, 100, cmap = cmap, **cont_kws)
             ax1.contour(ax, ay, funcgrid, n_levels, colors = "black", alpha = 0.3)
-            ax1.grid(True)
+            ax1.grid(True, linestyle = ":")
         elif projection == "3d":
             if axes is None:
                 fig = plt.figure(figsize = figsize, facecolor = "white")

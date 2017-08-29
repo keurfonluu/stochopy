@@ -34,14 +34,14 @@ class MonteCarlo:
         provided.
     max_iter : int, optional, default 1000
         Number of models to sample.
-    clip : bool, optional, default False
+    constrain : bool, optional, default True
         Accept sample only within search space.
     random_state : int, optional, default None
         Seed for random number generator.
     """
     
     def __init__(self, func, lower = None, upper = None, n_dim = 1,
-                 max_iter = 1000, clip = False, random_state = None,
+                 max_iter = 1000, constrain = True, random_state = None,
                  args = (), kwargs = {}):
         # Check inputs
         if not hasattr(func, "__call__"):
@@ -68,13 +68,36 @@ class MonteCarlo:
             raise ValueError("max_iter must be a positive integer, got %s" % max_iter)
         else:
             self._max_iter = max_iter
-        if not isinstance(clip, bool):
-            raise ValueError("clip must be either True or False, got %s" % clip)
+        if not isinstance(constrain, bool):
+            raise ValueError("constrain must be either True or False, got %s" % constrain)
         else:
-            self._clip = clip
+            self._constrain = constrain
         if random_state is not None:
             np.random.seed(random_state)
         return
+    
+    def __repr__(self):
+        solution = "%s:\n%s" % ("solution".rjust(13), self._print_attr("solution"))
+        fitness = "%s: %s" % ("fitness".rjust(13), self._print_attr("fitness"))
+        acceptance_ratio = "%s: %s" % ("ratio".rjust(13), self._print_attr("acceptance_ratio"))
+        return "\n".join((solution, fitness, acceptance_ratio)) + "\n"
+    
+    def _print_attr(self, attr):
+        if attr not in [ "solution", "fitness", "acceptance_ratio" ]:
+            raise ValueError("attr should be 'solution' or 'fitness'")
+        else:
+            if attr == "solution":
+                param = ""
+                for i in range(self._n_dim):
+                    tmp = "%.8g" % self._xopt[i]
+                    if self._xopt[i] >= 0.:
+                        tmp = " " + tmp
+                    param += "\t\t%s\n" % tmp
+                return param[:-1]
+            elif attr == "fitness":
+                return "%.8g" % self._gfit
+            elif attr == "acceptance_ratio":
+                return "%.2f" % self._acceptance_ratio
     
     def sample(self, sampler = "hastings", stepsize = 1., xstart = None,
                n_leap = 10, fprime = None, delta = 1e-3, snap_leap = False,
@@ -225,7 +248,10 @@ class MonteCarlo:
         """
         self._models = np.array([ self._random_model() for i in range(self._max_iter) ]).transpose()
         self._energy = np.array([ self._func(self._models[:,i]) for i in range(self._max_iter) ])
-        return self._best_model()
+        xopt, gfit = self._best_model()
+        self._xopt = xopt
+        self._gfit = gfit
+        return xopt, gfit
         
     def _hastings(self, stepsize = 1., xstart = None):
         """
@@ -275,7 +301,10 @@ class MonteCarlo:
         self._acceptance_ratio = 1. - rejected / self._max_iter
                 
         # Return best model
-        return self._best_model()
+        xopt, gfit = self._best_model()
+        self._xopt = xopt
+        self._gfit = gfit
+        return xopt, gfit
         
     def _hamiltonian(self, fprime = None, stepsize = 0.1, n_leap = 10, xstart = None,
                     delta = 1e-3, snap_leap = False, args = (), kwargs = {}):
@@ -374,7 +403,10 @@ class MonteCarlo:
         self._acceptance_ratio = 1. - rejected / self._max_iter
         
         # Return best model
-        return self._best_model()
+        xopt, gfit = self._best_model()
+        self._xopt = xopt
+        self._gfit = gfit
+        return xopt, gfit
     
     def _approx_grad(self, x, delta = 1e-3):
         grad = np.zeros(self._n_dim)
@@ -386,10 +418,26 @@ class MonteCarlo:
         return grad
     
     def _in_search_space(self, x):
-        if self._clip:
+        if self._constrain:
             return np.logical_and(np.all(x <= self._upper), np.all(x >= self._lower))
         else:
             return True
+        
+    @property
+    def xopt(self):
+        """
+        ndarray of shape (n_dim)
+        Optimal solution found by the optimizer.
+        """
+        return self._xopt
+    
+    @property
+    def gfit(self):
+        """
+        scalar
+        Objective function value of the optimal solution.
+        """
+        return self._gfit
     
     @property
     def models(self):

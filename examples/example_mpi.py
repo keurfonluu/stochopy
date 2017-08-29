@@ -38,12 +38,9 @@ if __name__ == "__main__":
     
     # Solve
     starttime = time()
-    xopt, gfit = ea.optimize(solver = "cpso")
+    ea.optimize(solver = "cpso")
     
     # Print solution
     if mpi_rank == 0:
-        print("Solution:")
-        [ print(x) for x in xopt ]
-        print("\nFitness: %.8f" % gfit)
-        print("Number of evaluations: %d" % ea.n_eval)
-        print("Elapsed time: %.2f" % (time() - starttime))
+        print(ea)
+        print("Elapsed time: %.2f seconds" % (time() - starttime))

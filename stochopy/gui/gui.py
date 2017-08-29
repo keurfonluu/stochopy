@@ -61,6 +61,7 @@ class StochOGUI():
                 "Sphere", "Styblinski-Tang" )
     EAOPT = ( "CPSO", "PSO", "DE", "CMAES", )
     MCOPT = ( "Hastings", "Hamiltonian", )
+    STRATOPT = ( "rand1", "rand2", "best1", "best2" )
     MIN_POPSIZE = { "cpso": 2, "pso": 2, "de": 4, "cmaes": 4 }
     
     def __init__(self, master):
@@ -120,7 +121,7 @@ class StochOGUI():
         
         # max_iter
         max_iter_label = ttk.Label(self.frame1, text = "Maximum number of iterations")
-        max_iter_spinbox = Spinbox(self.frame1, from_ = 1, to_ = 9999,
+        max_iter_spinbox = Spinbox(self.frame1, from_ = 2, to_ = 9999,
                                    increment = 1, textvariable = self.max_iter,
                                    width = 6, justify = "right", takefocus = True)
         
@@ -143,9 +144,9 @@ class StochOGUI():
         solver_option_menu = ttk.OptionMenu(self.frame1, self.solver_name, self.solver_name.get(),
                                             *(self.EAOPT + self.MCOPT), command = self.select_widget)
         
-        # clip
-        clip_button = ttk.Checkbutton(self.frame1, text = "Clip to edges",
-                                      variable = self.clip, takefocus = False)
+        # constrain
+        constrain_button = ttk.Checkbutton(self.frame1, text = "Constrain",
+                                      variable = self.constrain, takefocus = False)
         
         # Layout
         function_label.place(relx = 0., x = 5, y = 5, anchor = "nw")
@@ -158,13 +159,13 @@ class StochOGUI():
         seed_spinbox.place(width = 80, relx = 0., x = 220, y = 80, anchor = "nw")
         solver_label.place(relx = 0.35, x = 0, y = 5, anchor = "nw")
         solver_option_menu.place(relx = 0.35, x = 50, y = 3, anchor = "nw")
-        clip_button.place(relx = 0.35, x = 0, y = 80, anchor = "nw")
+        constrain_button.place(relx = 0.35, x = 0, y = 80, anchor = "nw")
         
     def frame1_pop(self):
         if not self.frame1.first_run:
             self.frame1.pop.forget()
         self.frame1.pop = ttk.Frame(self.frame1, borderwidth = 0)
-        self.frame1.pop.place(width = 170, height = 25, relx = 0.35, y = 55, anchor = "nw")
+        self.frame1.pop.place(width = 170, height = 25, relx = 0.35, y = 30, anchor = "nw")
         if self.solver_name.get() in self.EAOPT:
             # popsize
             popsize_label = ttk.Label(self.frame1.pop, text = "Population size")
@@ -175,6 +176,19 @@ class StochOGUI():
             # Layout
             popsize_label.place(relx = 0, x = 0, y = 0, anchor = "nw")
             popsize_spinbox.place(width = 60, relx = 0, x = 110, y = 0, anchor = "nw")
+            
+    def frame1_sync(self):
+        if not self.frame1.first_run:
+            self.frame1.sync.forget()
+        self.frame1.sync = ttk.Frame(self.frame1, borderwidth = 0)
+        self.frame1.sync.place(width = 170, height = 25, relx = 0.35, y = 55, anchor = "nw")
+        if self.solver_name.get() in [ "CPSO", "PSO", "DE" ]:
+            # sync
+            sync_button = ttk.Checkbutton(self.frame1.sync, text = "Synchronize",
+                                          variable = self.sync, takefocus = False)
+            
+            # Layout
+            sync_button.place(relx = 0, x =0, y = 0, anchor = "nw")
             
     def frame2(self):
         from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -198,6 +212,7 @@ class StochOGUI():
         
     def select_widget(self, solver):
         self.frame1_pop()
+        self.frame1_sync()
         if solver == "CPSO":
             self.cpso_widget()
         elif solver == "PSO":
@@ -285,15 +300,22 @@ class StochOGUI():
         # Initialize widget
         self.init_widget()
         
+        # strategy
+        self.strategy_label = ttk.Label(self.frame1.sliders, text = "Strategy")
+        self.strategy_option_menu = ttk.OptionMenu(self.frame1.sliders, self.strategy, self.strategy.get(),
+                                                   *sorted(self.STRATOPT))
+        self.strategy_label.place(relx = 0, x = 0, y = 5, anchor = "nw")
+        self.strategy_option_menu.place(relx = 0, x = 70, y = 3, anchor = "nw")
+        
         # CR
-        self._label("Crossover probability", 1)
-        self._scale(0., 1., 0.01, self.CR, 1)
-        self._entry(self.CR, 1)
+        self._label("Crossover probability", 2)
+        self._scale(0., 1., 0.01, self.CR, 2)
+        self._entry(self.CR, 2)
 
         # F
-        self._label("Differential weight", 2)
-        self._scale(0., 2., 0.01, self.F, 2)
-        self._entry(self.F, 2)
+        self._label("Differential weight", 4)
+        self._scale(0., 2., 0.01, self.F, 4)
+        self._entry(self.F, 4)
         
     def cmaes_widget(self):
         # Initialize widget
@@ -410,7 +432,7 @@ class StochOGUI():
                 else:
                     stepsize = self.hmc_stepsize.get()
                 self.solver = MonteCarlo(max_iter = self.max_iter.get(),
-                                         clip = bool(self.clip.get()),
+                                         constrain = bool(self.constrain.get()),
                                          **self.bf.get())
                 self.solver.sample(sampler = solver_name,
                                    stepsize = stepsize,
@@ -418,15 +440,18 @@ class StochOGUI():
             elif solver_name in [ "cpso", "pso", "de", "cmaes" ]:
                 self.solver = Evolutionary(popsize = self.popsize.get(),
                                            max_iter = self.max_iter.get(),
-                                           clip = bool(self.clip.get()),
+                                           constrain = bool(self.constrain.get()),
+                                           snap = True,
                                            **self.bf.get())
-                self.solver.optimize(solver = solver_name, snap = True,
+                self.solver.optimize(solver = solver_name,
+                                     sync = bool(self.sync.get()),
                                      w = self.w.get(),
                                      c1 = self.c1.get(),
                                      c2 = self.c2.get(),
                                      gamma = self.gamma.get(),
                                      CR = self.CR.get(),
                                      F = self.F.get(),
+                                     strategy = self.strategy.get().lower(),
                                      sigma = self.sigma.get(),
                                      mu_perc = self.mu_perc.get())
                 
@@ -475,7 +500,7 @@ class StochOGUI():
         ax2.set_xlim((1, max_iter))
         ax2.set_yscale(yscale)
         ax2.set_ylabel(ylabel, fontsize = 12)
-        ax2.grid(True)
+        ax2.grid(True, linestyle = ":")
         self.iter = ax2.text(0.99, 0.99, "", va = "top", ha = "right",
                              fontsize = 10,
                              transform = ax2.transAxes,
@@ -499,7 +524,7 @@ class StochOGUI():
         return self.scatplot, self.enerplot, self.iter,
     
     def _update_evolutionary(self, i, models, gfit):
-        self.scatplot.set_data(models[0,:,i], models[1,:,i])
+        self.scatplot.set_data(models[:,0,i], models[:,1,i])
         self.enerplot.set_xdata(np.linspace(1, i+1, i+1))
         self.enerplot.set_ydata(gfit[:i+1])
         self.iter.set_text("Iteration %d" % (i+1))
@@ -569,11 +594,13 @@ class StochOGUI():
         self.gamma = tk.DoubleVar(self.master)
         self.CR = tk.DoubleVar(self.master)
         self.F = tk.DoubleVar(self.master)
+        self.strategy = tk.StringVar(self.master)
         self.sigma = tk.DoubleVar(self.master)
         self.mu_perc = tk.DoubleVar(self.master)
         self.seed = tk.IntVar(self.master)
         self.fix_seed = tk.BooleanVar(self.master)
-        self.clip = tk.BooleanVar(self.master)
+        self.constrain = tk.BooleanVar(self.master)
+        self.sync = tk.BooleanVar(self.master)
     
     def trace_variables(self):
         self.solver_name.trace("w", self.callback)
@@ -594,11 +621,13 @@ class StochOGUI():
         self.gamma.trace("w", self.callback)
         self.CR.trace("w", self.callback)
         self.F.trace("w", self.callback)
+        self.strategy.trace("w", self.callback)
         self.sigma.trace("w", self.callback)
         self.mu_perc.trace("w", self.callback)
         self.seed.trace("w", self.callback)
         self.fix_seed.trace("w", self.callback)
-        self.clip.trace("w", self.callback)
+        self.constrain.trace("w", self.callback)
+        self.sync.trace("w", self.callback)
 
     def init_variables(self):
         self.solver_name.set("CPSO")
@@ -617,13 +646,15 @@ class StochOGUI():
         self.c1.set(1.49)
         self.c2.set(1.49)
         self.gamma.set(1.25)
-        self.CR.set(0.5)
-        self.F.set(1.)
+        self.CR.set(0.1)
+        self.F.set(0.5)
+        self.strategy.set("best2")
         self.sigma.set(1.)
         self.mu_perc.set(0.5)
         self.seed.set(42)
         self.fix_seed.set(False)
-        self.clip.set(False)
+        self.constrain.set(True)
+        self.sync.set(False)
         
     def check_variables(self):
         # Check popsize

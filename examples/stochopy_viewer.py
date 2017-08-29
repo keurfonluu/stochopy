@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Run StochOPy Viewer to see how popular stochastic algorithm work, and play with
-the tuning parameters on several benchmark functions.
+Run StochOPy Viewer to see how popular stochastic algorithms work, and play
+with the tuning parameters on several benchmark functions.
 
 Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT
