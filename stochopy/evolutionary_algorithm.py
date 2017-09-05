@@ -867,7 +867,7 @@ class Evolutionary:
         # Initialize saved outputs
         if self._snap:
             self._init_models()
-            self._means = np.zeros((self._n_dim, self._max_iter))
+            self._means = np.zeros((self._max_iter, self._n_dim))
         
         # Population initial positions
         if xstart is None:
@@ -980,7 +980,7 @@ class Evolutionary:
             if self._snap:
                 self._models[:,:,it-1] = self._unstandardize(arx)
                 self._energy[:,it-1] = np.array(arfitness)
-                self._means[:,it-1] = self._unstandardize(xmean)
+                self._means[it-1,:] = self._unstandardize(xmean)
             
             # Sort by fitness and compute weighted mean into xmean
             arindex = np.argsort(arfitness)
@@ -1087,7 +1087,7 @@ class Evolutionary:
         if self._snap:
             self._models = self._models[:,:,:it]
             self._energy = self._energy[:,:it]
-            self._means = self._means[:,:it]
+            self._means = self._means[:it,:]
         return xopt, gfit
     
     @property
@@ -1170,7 +1170,7 @@ class Evolutionary:
     @property
     def means(self):
         """
-        ndarray of shape (n_dim, max_iter)
+        ndarray of shape (max_iter, n_dim)
         Mean models at every iterations. Available only when solver = 'cmaes'
         and snap = True.
         """

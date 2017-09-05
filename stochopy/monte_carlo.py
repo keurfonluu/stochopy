@@ -224,7 +224,7 @@ class MonteCarlo:
         return xopt, gfit
     
     def _init_models(self):
-        self._models = np.zeros((self._n_dim, self._max_iter))
+        self._models = np.zeros((self._max_iter, self._n_dim))
         self._energy = np.zeros(self._max_iter)
         return
     
@@ -233,7 +233,7 @@ class MonteCarlo:
     
     def _best_model(self):
         idx = np.argmin(self._energy)
-        return self._models[:,idx], self._energy[idx]
+        return self._models[idx,:], self._energy[idx]
         
     def _pure(self):
         """
@@ -246,8 +246,8 @@ class MonteCarlo:
         gfit : scalar
             Energy of the MAP model.
         """
-        self._models = np.array([ self._random_model() for i in range(self._max_iter) ]).transpose()
-        self._energy = np.array([ self._func(self._models[:,i]) for i in range(self._max_iter) ])
+        self._models = np.array([ self._random_model() for i in range(self._max_iter) ])
+        self._energy = np.array([ self._func(self._models[i,:]) for i in range(self._max_iter) ])
         xopt, gfit = self._best_model()
         self._xopt = xopt
         self._gfit = gfit
@@ -280,23 +280,23 @@ class MonteCarlo:
         """
         # Initialize models
         if xstart is None:
-            self._models[:,0] = self._random_model()
+            self._models[0,:] = self._random_model()
         else:
-            self._models[:,0] = np.array(xstart)
-        self._energy[0] = self._func(self._models[:,0])
+            self._models[0,:] = np.array(xstart)
+        self._energy[0] = self._func(self._models[0,:])
         
         # Metropolis-Hastings algorithm
         rejected = 0
         for i in range(1, self._max_iter):
             r1 = np.random.randn(self._n_dim)
-            self._models[:,i] = self._models[:,i-1] + r1 * stepsize
-            self._energy[i] = self._func(self._models[:,i])
+            self._models[i,:] = self._models[i-1,:] + r1 * stepsize
+            self._energy[i] = self._func(self._models[i,:])
             
             log_alpha = min(0., self._energy[i-1] - self._energy[i])
             if log_alpha < np.log(np.random.rand()) \
-                or not self._in_search_space(self._models[:,i]):
+                or not self._in_search_space(self._models[i,:]):
                 rejected += 1
-                self._models[:,i] = self._models[:,i-1]
+                self._models[i,:] = self._models[i-1,:]
                 self._energy[i] = self._energy[i-1]
         self._acceptance_ratio = 1. - rejected / self._max_iter
                 
@@ -360,23 +360,23 @@ class MonteCarlo:
         
         # Initialize models
         if xstart is None:
-            self._models[:,0] = self._random_model()
+            self._models[0,:] = self._random_model()
         else:
-            self._models[:,0] = np.array(xstart)
-        self._energy[0] = self._func(self._models[:,0])
+            self._models[0,:] = np.array(xstart)
+        self._energy[0] = self._func(self._models[0,:])
         
         # Save leap frog trajectory
         if snap_leap:
-            self._leap_frog = np.zeros((self._n_dim, n_leap+1, self._max_iter-1))
+            self._leap_frog = np.zeros((self._max_iter-1, self._n_dim, n_leap+1))
         
         # Leap-frog algorithm
         rejected = 0
         for i in range(1, self._max_iter):
-            q = np.array(self._models[:,i-1])
+            q = np.array(self._models[i-1,:])
             p = np.random.randn(self._n_dim)            # Random momentum
             q0, p0 = np.array(q), np.array(p)
             if snap_leap:
-                self._leap_frog[:,0,i-1] = np.array(q)
+                self._leap_frog[i-1,:,0] = np.array(q)
             
             p -= 0.5 * stepsize * grad(q)               # First half momentum step
             q += stepsize * p                           # First full position step
@@ -393,12 +393,12 @@ class MonteCarlo:
             K = 0.5 * np.sum(p**2)
             log_alpha = min(0., U0 - U + K0 - K)
             if log_alpha < np.log(np.random.rand()) \
-                or not self._in_search_space(self._models[:,i]):
+                or not self._in_search_space(self._models[i,:]):
                 rejected += 1
-                self._models[:,i] = self._models[:,i-1]
+                self._models[i,:] = self._models[i-1,:]
                 self._energy[i] = self._energy[i-1]
             else:
-                self._models[:,i] = q
+                self._models[i,:] = q
                 self._energy[i] = U
         self._acceptance_ratio = 1. - rejected / self._max_iter
         
@@ -442,7 +442,7 @@ class MonteCarlo:
     @property
     def models(self):
         """
-        ndarray of shape (n_dim, max_iter)
+        ndarray of shape (max_iter, n_dim)
         Sampled models.
         """
         return self._models
@@ -466,7 +466,7 @@ class MonteCarlo:
     @property
     def leap_frog(self):
         """
-        ndarray of shape (n_leap, n_leap+1, max_iter-1)
+        ndarray of shape (max_iter-1, n_dim, n_leap+1)
         Leap frog positions. Available only when sampler = 'hamiltonian' and
         snap_leap = True.
         """

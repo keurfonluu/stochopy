@@ -45,7 +45,7 @@ class MonteCarloTest(unittest.TestCase):
         Pure Monte-Carlo test.
         """
         self.sampler.sample(sampler = "pure")
-        mean = np.mean(self.sampler.models, axis = 1)
+        mean = np.mean(self.sampler.models, axis = 0)
         mean_true = np.array([ -0.6070602, -0.00363818 ])
         for i, val in enumerate(mean):
             self.assertAlmostEqual(val, mean_true[i])
@@ -56,7 +56,7 @@ class MonteCarloTest(unittest.TestCase):
         """
         stepsize = 1.409
         self.sampler.sample(sampler = "hastings", stepsize = stepsize)
-        mean = np.mean(self.sampler.models, axis = 1)
+        mean = np.mean(self.sampler.models, axis = 0)
         mean_true = np.array([ -1.70303377, 3.24138444 ])
         for i, val in enumerate(mean):
             self.assertAlmostEqual(val, mean_true[i])
@@ -69,7 +69,7 @@ class MonteCarloTest(unittest.TestCase):
         n_leap = 14
         self.sampler.sample(sampler = "hamiltonian", stepsize = stepsize,
                             n_leap = n_leap)
-        mean = np.mean(self.sampler.models, axis = 1)
+        mean = np.mean(self.sampler.models, axis = 0)
         mean_true = np.array([ -1.28470918, 4.6153145 ])
         for i, val in enumerate(mean):
             self.assertAlmostEqual(val, mean_true[i])

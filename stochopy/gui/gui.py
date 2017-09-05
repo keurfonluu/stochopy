@@ -470,11 +470,13 @@ class StochOGUI():
         if self.solver._solver in [ "hastings", "hamiltonian" ]:
             func = self._update_monte_carlo
             gfit = self.solver.energy
+            frames = models.shape[0]
             linestyle = "--"
             ylabel = "Fitness"
         elif self.solver._solver in [ "cpso", "pso", "de", "cmaes" ]:
             func = self._update_evolutionary
             gfit = self._gfit(self.solver.energy)
+            frames = models.shape[-1]
             linestyle = "none"
             ylabel = "Global best fitness"
         max_iter = len(gfit)
@@ -510,14 +512,14 @@ class StochOGUI():
         self.anim_running = True
         self.anim = animation.FuncAnimation(self.fig, func,
                                             fargs = (models, gfit),
-                                            frames = models.shape[-1],
+                                            frames = frames,
                                             interval = interval,
                                             repeat = repeat,
                                             blit = True)
         self.fig.tight_layout()
     
     def _update_monte_carlo(self, i, models, gfit):
-        self.scatplot.set_data(models[0,:i], models[1,:i])
+        self.scatplot.set_data(models[:i,0], models[:i,1])
         self.enerplot.set_xdata(np.linspace(1, i+1, i+1))
         self.enerplot.set_ydata(gfit[:i+1])
         self.iter.set_text("Sample %d" % (i+1))
