@@ -65,6 +65,8 @@ class Evolutionary:
         Keyworded arguments to pass to objective function.
     """
     
+    _ATTRIBUTES = [ "solution", "fitness", "n_iter", "n_eval", "flag" ]
+    
     def __init__(self, func, lower = None, upper = None, n_dim = 1,
                  popsize = 10, max_iter = 100, eps1 = 1e-8, eps2 = 1e-8,
                  constrain = True, snap = False, random_state = None, mpi = False,
@@ -129,19 +131,16 @@ class Evolutionary:
         return
     
     def __repr__(self):
-        solution = "%s:\n%s" % ("solution".rjust(13), self._print_attr("solution"))
-        fitness = "%s: %s" % ("fitness".rjust(13), self._print_attr("fitness"))
-        n_iter = "%s: %s" % ("n_iter".rjust(13), self._print_attr("n_iter"))
-        n_eval = "%s: %s" % ("n_eval".rjust(13), self._print_attr("n_eval"))
-        flag = "%s: %s" % ("flag".rjust(13), self._print_attr("flag"))
-        return "\n".join((solution, fitness, n_iter, n_eval, flag)) + "\n"
+        attributes = [ "%s: %s" % (attr.rjust(13), self._print_attr(attr))
+                        for attr in self._ATTRIBUTES ]
+        return "\n".join(attributes) + "\n"
     
     def _print_attr(self, attr):
-        if attr not in [ "solution", "fitness", "n_iter", "n_eval", "flag" ]:
-            raise ValueError("attr should be 'solution', 'fitness', 'n_iter', 'n_eval' or 'flag'")
+        if attr not in self._ATTRIBUTES:
+            raise ValueError("attr should be either 'solution', 'fitness', 'n_iter', 'n_eval' or 'flag'")
         else:
             if attr == "solution":
-                param = ""
+                param = "\n"
                 for i in range(self._n_dim):
                     tmp = "%.8g" % self._xopt[i]
                     if self._xopt[i] >= 0.:

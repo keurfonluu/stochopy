@@ -322,12 +322,12 @@ class StochOGUI():
         self.init_widget()
         
         # sigma
-        self._label("Sigma", 1)
+        self._label("Step size", 1)
         self._scale(0.01, 10., 0.01, self.sigma, 1)
         self._entry(self.sigma, 1)
         
         # mu_perc
-        self._label("Percentage of offspring", 2)
+        self._label("Percentage of offsprings", 2)
         self._scale(0.01, 1., 0.01, self.mu_perc, 2)
         self._entry(self.mu_perc, 2)
         

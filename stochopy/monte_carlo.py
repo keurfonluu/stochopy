@@ -40,6 +40,8 @@ class MonteCarlo:
         Seed for random number generator.
     """
     
+    _ATTRIBUTES = [ "solution", "fitness", "acceptance_ratio" ]
+    
     def __init__(self, func, lower = None, upper = None, n_dim = 1,
                  max_iter = 1000, constrain = True, random_state = None,
                  args = (), kwargs = {}):
@@ -77,17 +79,16 @@ class MonteCarlo:
         return
     
     def __repr__(self):
-        solution = "%s:\n%s" % ("solution".rjust(13), self._print_attr("solution"))
-        fitness = "%s: %s" % ("fitness".rjust(13), self._print_attr("fitness"))
-        acceptance_ratio = "%s: %s" % ("ratio".rjust(13), self._print_attr("acceptance_ratio"))
-        return "\n".join((solution, fitness, acceptance_ratio)) + "\n"
+        attributes = [ "%s: %s" % (attr.rjust(13), self._print_attr(attr))
+                        for attr in self._ATTRIBUTES ]
+        return "\n".join(attributes) + "\n"
     
     def _print_attr(self, attr):
-        if attr not in [ "solution", "fitness", "acceptance_ratio" ]:
-            raise ValueError("attr should be 'solution' or 'fitness'")
+        if attr not in self._ATTRIBUTES:
+            raise ValueError("attr should be either 'solution', 'fitness' or 'acceptance_ratio'")
         else:
             if attr == "solution":
-                param = ""
+                param = "\n"
                 for i in range(self._n_dim):
                     tmp = "%.8g" % self._xopt[i]
                     if self._xopt[i] >= 0.:

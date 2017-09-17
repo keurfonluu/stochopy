@@ -10,6 +10,7 @@ License: MIT
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d import Axes3D
 
 __all__ = [ "BenchmarkFunction" ]
@@ -24,10 +25,10 @@ class BenchmarkFunction:
     
     Parameters
     ----------
-    func: {'ackley', 'griewank', 'quartic', 'quartic_noise', 'rastrigin',
+    func : {'ackley', 'griewank', 'quartic', 'quartic_noise', 'rastrigin',
            'rosenbrock', 'sphere', 'styblinski-tang'}
         Benchmark function name.
-    n_dim: int, default 2
+    n_dim : int, default 2
         Number of dimensions.
     """
     
@@ -82,7 +83,7 @@ class BenchmarkFunction:
         
         Returns
         -------
-        dict: dictionary
+        dict : dictionary
             Dictionary containing the function, the lower and upper boundaries.
         """
         return dict(func = self._func, lower = self._lower, upper = self._upper)
@@ -132,28 +133,47 @@ class BenchmarkFunction:
         
         Parameters
         ----------
-        nx: int, default 101
+        nx : int, default 101
             Number of samples in the first dimension.
-        ny: int, default 101
+        ny : int, default 101
             Number of samples in the second dimension.
-        n_levels: int, default 10
+        n_levels : int, default 10
             Number of levels for contour.
-        axes: matplotlib axes or None, default None
+        axes : matplotlib axes or None, default None
             Axes used for plot.
-        figsize: tuple, default (8, 8)
+        figsize : tuple, default (8, 8)
             Figure width and height if axes is None.
-        cmap: str, default "viridis"
+        cmap : str, default "viridis"
             Colormap.
-        cont_kws: dict
+        cont_kws : dict
             Keyworded arguments passed to contour plot.
-        surf_kws: dict
+        surf_kws : dict
             Keyworded arguments passed to surface plot
             
         Returns
         -------
-        ax1: matplotlib axes
+        ax1 : matplotlib axes
             Axes used for plot.
         """
+        if not isinstance(nx, int) or nx < 1:
+            raise ValueError("nx must be a positive integer")
+        if not isinstance(ny, int) or ny < 1:
+            raise ValueError("ny must be a positive integer")
+        if not isinstance(n_levels, int) or n_levels < 1:
+            raise ValueError("n_levels must be a positive integer")
+        if axes is not None and not isinstance(axes, Axes):
+            raise ValueError("axes must be Axes")
+        if not isinstance(figsize, (list, tuple)) or len(figsize) != 2:
+            raise ValueError("figsize must be a tuple with 2 elements")
+        if projection not in [ "2d", "3d" ]:
+            raise ValueError("projection must be either '2d' or '3d'")
+        if cmap is not None and not isinstance(cmap, str):
+            raise ValueError("cmap must be a string")
+        if not isinstance(cont_kws, dict):
+            raise ValueError("cont_kws must be a dictionary")
+        if not isinstance(surf_kws, dict):
+            raise ValueError("surf_kws must be a dictionary")
+            
         if cmap is None:
             cmap = self._set_cmap()
         ax = np.linspace(self._lower[0], self._upper[0], nx)
