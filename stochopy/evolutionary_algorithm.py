@@ -116,7 +116,7 @@ class Evolutionary:
             raise ValueError("snap must be either True or False, got %s")
         else:
             self._snap = snap
-        if random_state is not None:
+        if random_state is not None and random_state >= 0:
             np.random.seed(random_state)
         if not isinstance(mpi, bool):
             raise ValueError("mpi must be either True or False, got %s" % mpi)
@@ -133,11 +133,13 @@ class Evolutionary:
     def __repr__(self):
         attributes = [ "%s: %s" % (attr.rjust(13), self._print_attr(attr))
                         for attr in self._ATTRIBUTES ]
+        if self._solver == "cpso":
+            attributes.append("%s: %s" % ("n_restart".rjust(13), self._print_attr("n_restart")))
         return "\n".join(attributes) + "\n"
     
     def _print_attr(self, attr):
-        if attr not in self._ATTRIBUTES:
-            raise ValueError("attr should be either 'solution', 'fitness', 'n_iter', 'n_eval' or 'flag'")
+        if attr not in self._ATTRIBUTES + [ "n_restart" ]:
+            raise ValueError("attr should be either 'solution', 'fitness', 'n_iter', 'n_eval', 'n_restart' or 'flag'")
         else:
             if attr == "solution":
                 param = "\n"
@@ -153,11 +155,13 @@ class Evolutionary:
                 return "%d" % self._n_iter
             elif attr == "n_eval":
                 return "%d" % self._n_eval
+            elif attr == "n_restart":
+                return "%d" % self._n_restart
             elif attr == "flag":
                 return "%s" % self.flag
     
     def optimize(self, solver = "cpso", xstart = None, sync = True,
-                 w = 0.72, c1 = 1.49, c2 = 1.49, l = 0.1, gamma = 1.25, delta = None,
+                 w = 0.7298, c1 = 1.49618, c2 = 1.49618, gamma = 1.,
                  F = 0.5, CR = 0.1, strategy = "best2",
                  sigma = 1., mu_perc = 0.5):
         """
@@ -180,18 +184,14 @@ class Evolutionary:
             Synchronize population, the best individual is updated after each
             iteration which allows the parallelization. Only used if 'solver'
             is 'pso', 'cpso', or 'de'.
-        w : scalar, optional, default 0.72
+        w : scalar, optional, default 0.7298
             Inertial weight. Only used when solver = {'pso', 'cpso'}.
-        c1 : scalar, optional, default 1.49
+        c1 : scalar, optional, default 1.49618
             Cognition parameter. Only used when solver = {'pso', 'cpso'}.
-        c2 : scalar, optional, default 1.49
+        c2 : scalar, optional, default 1.49618
             Sociability parameter. Only used when solver = {'pso', 'cpso'}.
-        l : scalar, optional, default 0.1
-            Velocity clamping percentage. Only used when solver = {'pso', 'cpso'}.
-        gamma : scalar, optional, default 1.25
+        gamma : scalar, optional, default 1.
             Competitivity parameter. Only used when solver = 'cpso'.
-        delta : None or scalar, optional, default None
-            Swarm maximum radius. Only used when solver = 'cpso'.
         F : scalar, optional, default 0.5
             Differential weight. Only used when solver = 'de'.
         CR : scalar, optional, default 0.1
@@ -258,6 +258,7 @@ class Evolutionary:
         
         # Initialize
         self._solver = solver
+        self._n_restart = 0
         self._init_models()
         self._mu_scale = 0.5 * (self._upper + self._lower)
         self._std_scale = 0.5 * (self._upper - self._lower)
@@ -271,11 +272,11 @@ class Evolutionary:
         
         # Solve
         if solver == "pso":
-            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, gamma = 0.,
-                                   xstart = xstart, sync = sync)
+            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, gamma = 0.,
+                                    xstart = xstart, sync = sync)
         elif solver == "cpso":
-            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, l = l, gamma = gamma,
-                                   delta = delta, xstart = xstart, sync = sync)
+            xopt, gfit = self._cpso(w = w, c1 = c1, c2 = c2, gamma = gamma,
+                                    xstart = xstart, sync = sync)
         elif solver == "de":
             xopt, gfit = self._de(F = F, CR = CR, strategy = strategy,
                                   xstart = xstart, sync = sync)
@@ -597,26 +598,22 @@ class Evolutionary:
             self._energy = self._energy[:,:it]
         return xopt, gfit
         
-    def _cpso(self, w = 0.72, c1 = 1.49, c2 = 1.49, l = 0.1, gamma = 1.25,
-             delta = None, xstart = None, sync = True):
+    def _cpso(self, w = 0.7298, c1 = 1.49618, c2 = 1.49618, gamma = 1.,
+              xstart = None, sync = True):
         """
         Minimize an objective function using Competitive Particle Swarm
         Optimization (CPSO). Set gamma = 0. for classical PSO.
         
         Parameters
         ----------
-        w : scalar, optional, default 0.72
+        w : scalar, optional, default 0.7298
             Inertial weight.
-        c1 : scalar, optional, default 1.49
+        c1 : scalar, optional, default 1.49618
             Cognition parameter.
-        c2 : scalar, optional, default 1.49
+        c2 : scalar, optional, default 1.49618
             Sociability parameter.
-        l : scalar, optional, default 0.1
-            Velocity clamping percentage.
-        gamma : scalar, optional, default 1.25
+        gamma : scalar, optional, default 1.
             Competitivity parameter.
-        delta : None or scalar, optional, default None
-            Swarm maximum radius.
         xstart : None or ndarray, optional, default None
             Initial positions of the population.
         sync : bool, optional, default True
@@ -649,12 +646,8 @@ class Evolutionary:
             raise ValueError("c1 must be an integer or float in [ 0, 4 ], got %s" % c1)
         if not isinstance(c2, float) and not isinstance(c2, int) or not 0. <= c2 <= 4.:
             raise ValueError("c2 must be an integer or float in [ 0, 4 ], got %s" % c2)
-        if not isinstance(l, float) and not isinstance(l, int) or not 0. < l <= 1.:
-            raise ValueError("l must be an integer or float in ] 0, 1 ], got %s" % l)
         if not isinstance(gamma, float) and not isinstance(gamma, int) or not 0. <= gamma <= 2.:
             raise ValueError("gamma must be an integer or float in [ 0, 2 ], got %s" % gamma)
-        if not isinstance(delta, type(None)) and not isinstance(delta, float) and not isinstance(delta, int) and not delta > 0.:
-            raise ValueError("delta must be None, a positive integer or float, got %s" % delta)
         if xstart is not None and isinstance(xstart, np.ndarray) \
             and xstart.shape != (self._popsize, self._n_dim):
             raise ValueError("xstart must be a ndarray of shape (popsize, n_dim)")
@@ -667,8 +660,7 @@ class Evolutionary:
         pbest = np.array(X)
         
         # Initialize particle velocity
-        vmax = np.full_like(self._n_dim, 2. * l)
-        V = np.random.uniform(-vmax, vmax, (self._popsize, self._n_dim))
+        V = np.zeros((self._popsize, self._n_dim))
         
         # Compute fitness
         pfit = self._eval_models(X)
@@ -685,8 +677,7 @@ class Evolutionary:
         gbest = np.array(X[gbidx,:])
         
         # Swarm maximum radius
-        if delta is None:
-            delta = 0.08686 * np.log(1. + 0.004 * self._popsize)
+        delta = np.log(1. + 0.003 * self._popsize) / np.max((0.2, np.log(0.01*self._max_iter)))
         
         # Iterate until one of the termination criterion is satisfied
         it = 1
@@ -808,14 +799,12 @@ class Evolutionary:
                     
                     # Reset positions, velocities and personal bests
                     if nw > 0:
+                        self._n_restart += 1
                         idx = pbestfit.argsort()[:-nw-1:-1]
-                        V[idx,:] = np.random.uniform(-vmax, vmax, (nw, self._n_dim))
+                        V[idx,:] = np.zeros((nw, self._n_dim))
                         X[idx,:] = np.random.uniform(-1., 1., (nw, self._n_dim))
                         pbest[idx,:] = np.array(X[idx,:])
-                        
-                        # Reset personal best fits
-                        pbestfit[idx] = self._eval_models(pbest[idx,:])
-                        self._n_eval += nw
+                        pbestfit[idx] = np.full(nw, 1e30)
                 
         self._xopt = np.array(xopt)
         self._gfit = gfit

@@ -86,7 +86,7 @@ class StochOGUI():
         self.select_widget(self.solver_name.get())
         
     def about(self):
-        about = "StochOPy Viewer 1.1" + "\n" \
+        about = "StochOPy Viewer 1.2" + "\n" \
                 + "Created by Keurfon Luu"
         tkmessage.showinfo("About", about)
         
@@ -339,16 +339,16 @@ class StochOGUI():
         
         # stepsize x1
         self._label("Step size X1", 1)
-        ss = self._scale(-3., 1., 0.1, self.log_mcmc_stepsize_x1, 1,
-                         lambda val: self.mcmc_stepsize_x1.set(round(10.**float(val), 3)))
+        ss = self._scale(-4., 0., 0.01, self.log_mcmc_stepsize_x1, 1,
+                         lambda val: self.mcmc_stepsize_x1.set(round(10.**float(val), 4)))
         ss.set(np.log10(self.mcmc_stepsize_x1.get()))
         self._entry(self.mcmc_stepsize_x1, 1, kwargs = dict(validate = "key",
                                                             validatecommand = (vcmd1, "%P")))
         
         # stepsize x2
         self._label("Step size X2", 2)
-        ss = self._scale(-3., 1., 0.1, self.log_mcmc_stepsize_x2, 2,
-                         lambda val: self.mcmc_stepsize_x2.set(round(10.**float(val), 3)))
+        ss = self._scale(-4., 0., 0.01, self.log_mcmc_stepsize_x2, 2,
+                         lambda val: self.mcmc_stepsize_x2.set(round(10.**float(val), 4)))
         ss.set(np.log10(self.mcmc_stepsize_x2.get()))
         self._entry(self.mcmc_stepsize_x2, 2, kwargs = dict(validate = "key",
                                                             validatecommand = (vcmd2, "%P")))
@@ -360,8 +360,8 @@ class StochOGUI():
         
         # stepsize
         self._label("Step size", 1)
-        ss = self._scale(-3., 1., 0.1, self.log_hmc_stepsize, 1,
-                         lambda val: self.hmc_stepsize.set(round(10.**float(val), 3)))
+        ss = self._scale(-4., 0., 0.01, self.log_hmc_stepsize, 1,
+                         lambda val: self.hmc_stepsize.set(round(10.**float(val), 4)))
         ss.set(np.log10(self.hmc_stepsize.get()))
         self._entry(self.hmc_stepsize, 1, kwargs = dict(validate = "key",
                                                         validatecommand = (vcmd, "%P")))
@@ -637,17 +637,17 @@ class StochOGUI():
         self.popsize.set(10)
         self.max_iter.set(200)
         self.interval.set(60)
-        self.mcmc_stepsize_x1.set(0.1)
-        self.mcmc_stepsize_x2.set(0.1)
-        self.hmc_stepsize.set(0.1)
+        self.mcmc_stepsize_x1.set(0.01)
+        self.mcmc_stepsize_x2.set(0.01)
+        self.hmc_stepsize.set(0.001)
         self.log_mcmc_stepsize_x1.set(np.log10(self.mcmc_stepsize_x1.get()))
         self.log_mcmc_stepsize_x2.set(np.log10(self.mcmc_stepsize_x2.get()))
         self.log_hmc_stepsize.set(np.log10(self.hmc_stepsize.get()))
         self.n_leap.set(10)
-        self.w.set(0.72)
-        self.c1.set(1.49)
-        self.c2.set(1.49)
-        self.gamma.set(1.25)
+        self.w.set(0.73)
+        self.c1.set(1.496)
+        self.c2.set(1.496)
+        self.gamma.set(1.)
         self.CR.set(0.1)
         self.F.set(0.5)
         self.strategy.set("best2")

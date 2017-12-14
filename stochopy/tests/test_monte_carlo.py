@@ -54,10 +54,10 @@ class MonteCarloTest(unittest.TestCase):
         """
         Metropolis-Hastings algorithm test.
         """
-        stepsize = 1.409
+        stepsize = 0.1409
         self.sampler.sample(sampler = "hastings", stepsize = stepsize)
         mean = np.mean(self.sampler.models, axis = 0)
-        mean_true = np.array([ -1.70303377, 3.24138444 ])
+        mean_true = np.array([ -1.96808276, 4.26872887 ])
         for i, val in enumerate(mean):
             self.assertAlmostEqual(val, mean_true[i])
             
@@ -65,12 +65,12 @@ class MonteCarloTest(unittest.TestCase):
         """
         Hamiltonian Monte-Carlo algorithm test.
         """
-        stepsize = 1.991
+        stepsize = 0.0091991
         n_leap = 14
         self.sampler.sample(sampler = "hamiltonian", stepsize = stepsize,
                             n_leap = n_leap)
         mean = np.mean(self.sampler.models, axis = 0)
-        mean_true = np.array([ -1.28470918, 4.6153145 ])
+        mean_true = np.array([ 0.89343405, 1.18474131 ])
         for i, val in enumerate(mean):
             self.assertAlmostEqual(val, mean_true[i])
   

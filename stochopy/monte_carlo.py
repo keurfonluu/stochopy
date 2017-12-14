@@ -74,7 +74,7 @@ class MonteCarlo:
             raise ValueError("constrain must be either True or False, got %s" % constrain)
         else:
             self._constrain = constrain
-        if random_state is not None:
+        if random_state is not None and random_state >= 0:
             np.random.seed(random_state)
         return
     
@@ -100,9 +100,9 @@ class MonteCarlo:
             elif attr == "acceptance_ratio":
                 return "%.2f" % self._acceptance_ratio
     
-    def sample(self, sampler = "hastings", stepsize = 1., xstart = None,
-               n_leap = 10, fprime = None, delta = 1e-3, snap_leap = False,
-               args = (), kwargs = {}):
+    def sample(self, sampler = "hastings", stepsize = 0.1, xstart = None,
+               perc = 1., n_leap = 10, fprime = None, delta = 1e-3,
+               snap_leap = False, args = (), kwargs = {}):
         """
         Sample the parameter space using pure Monte-Carlo,
         Metropolis-Hastings algorithm or Hamiltonian (Hybrid) Monte-Carlo.
@@ -115,7 +115,7 @@ class MonteCarlo:
             - 'hastings', random-walk with a gaussian perturbation.
             - 'hamiltonian', propose a new sample simulated with hamiltonian
               dynamics.
-        stepsize : scalar or ndarray, optional, default 1.
+        stepsize : scalar or ndarray, optional, default 0.1
             If sampler = 'pure', 'stepsize' is not used.
             If sampler = 'hastings', standard deviation of gaussian
             perturbation.
@@ -123,6 +123,9 @@ class MonteCarlo:
         xstart : None or ndarray, optional, default None
             First model of the Markov chain. If sampler = 'pure', 'xstart'
             is not used.
+        perc : scalar, optional, default 1.
+            Number of dimensions to perturb at each iteration as percentage of
+            n_dim. Only used when sampler = 'hastings'.
         n_leap : int, optional, default 10
             Number of leap-frog steps. Only used when sampler = 'hamiltonian'.
         fprime : callable, optional, default None
@@ -191,29 +194,23 @@ class MonteCarlo:
         if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.ndarray)) \
             and len(xstart) != self._n_dim:
             raise ValueError("xstart must be a list or ndarray of length n_dim")
-        if sampler == "hastings":
-            if not isinstance(stepsize, (float, int, list, np.ndarray)):
-                raise ValueError("stepsize must be a float, integer, list or ndarray")
-            else:
-                if isinstance(stepsize, (float, int)) and stepsize <= 0.:
-                    raise ValueError("stepsize must be positive, got %s" % stepsize)
-                elif isinstance(stepsize, (list, np.ndarray)) and np.any([ s <= 0 for s in stepsize ]):
-                    raise ValueError("elements in stepsize must be positive")
-                elif isinstance(stepsize, (list, np.ndarray)) and len(stepsize) != self._n_dim:
-                    raise ValueError("stepsize must be a list or ndarray of length n_dim")
-        elif sampler == "hamiltonian":
+        if sampler == "hamiltonian":
             if not isinstance(stepsize, (float, int)) or stepsize <= 0.:
                 raise ValueError("stepsize must be positive, got %s" % stepsize)
         
         # Initialize
         self._solver = sampler
         self._init_models()
+        self._mu_scale = 0.5 * (self._upper + self._lower)
+        self._std_scale = 0.5 * (self._upper - self._lower)
         
         # Sample
         if sampler == "pure":
             xopt, gfit = self._pure()
         elif sampler == "hastings":
-            xopt, gfit = self._hastings(stepsize = stepsize, xstart = xstart)
+            xopt, gfit = self._hastings(stepsize = stepsize,
+                                        perc = perc,
+                                        xstart = xstart)
         elif sampler == "hamiltonian":
             xopt, gfit = self._hamiltonian(fprime = fprime,
                                            stepsize = stepsize,
@@ -224,17 +221,16 @@ class MonteCarlo:
                                            args = args, kwargs = kwargs)
         return xopt, gfit
     
+    def _standardize(self, models):
+        return (models - self._mu_scale) / self._std_scale
+    
+    def _unstandardize(self, models):
+        return models * self._std_scale + self._mu_scale
+    
     def _init_models(self):
         self._models = np.zeros((self._max_iter, self._n_dim))
         self._energy = np.zeros(self._max_iter)
         return
-    
-    def _random_model(self):
-        return self._lower + np.random.rand(self._n_dim) * (self._upper - self._lower)
-    
-    def _best_model(self):
-        idx = np.argmin(self._energy)
-        return self._models[idx,:], self._energy[idx]
         
     def _pure(self):
         """
@@ -247,21 +243,26 @@ class MonteCarlo:
         gfit : scalar
             Energy of the MAP model.
         """
-        self._models = np.array([ self._random_model() for i in range(self._max_iter) ])
-        self._energy = np.array([ self._func(self._models[i,:]) for i in range(self._max_iter) ])
-        xopt, gfit = self._best_model()
-        self._xopt = xopt
-        self._gfit = gfit
-        return xopt, gfit
+        self._models = np.random.uniform(-1., 1., (self._max_iter, self._n_dim))
+        self._energy = np.array([ self._func(self._unstandardize(self._models[i,:])) for i in range(self._max_iter) ])
+        idx = np.argmin(self._energy)
+        self._models = self._unstandardize(self._models)
+        self._xopt = self._models[idx]
+        self._gfit = self._energy[idx]
+        self._acceptance_ratio = 1.
+        return self._xopt, self._gfit
         
-    def _hastings(self, stepsize = 1., xstart = None):
+    def _hastings(self, stepsize = 0.1, perc = 1., xstart = None):
         """
         Sample the parameter space using the Metropolis-Hastings algorithm.
         
         Parameters
         ----------
-        stepsize : scalar or ndarray, optional, default 1.
+        stepsize : scalar or ndarray, optional, default 0.1
             Standard deviation of gaussian perturbation.
+        perc : scalar, optional, default 1.
+            Number of dimensions to perturb at each iteration as a percentage
+            of n_dim.
         xstart : None or ndarray, optional, default None
             First model of the Markov chain.
             
@@ -279,36 +280,61 @@ class MonteCarlo:
          -  otherwise : acceptance ratio of 25%
         The acceptance ratio is given by the attribute 'acceptance_ratio'.
         """
+        # Check inputs
+        if not isinstance(stepsize, (float, int, list, np.ndarray)):
+            raise ValueError("stepsize must be a float, integer, list or ndarray")
+        else:
+            if isinstance(stepsize, (float, int)) and stepsize <= 0.:
+                raise ValueError("stepsize must be positive, got %s" % stepsize)
+            elif isinstance(stepsize, (list, np.ndarray)) and np.any([ s <= 0 for s in stepsize ]):
+                raise ValueError("elements in stepsize must be positive")
+            elif isinstance(stepsize, (list, np.ndarray)) and len(stepsize) != self._n_dim:
+                raise ValueError("stepsize must be a list or ndarray of length n_dim")
+        if isinstance(stepsize, (float, int)):
+            stepsize = np.full(self._n_dim, stepsize)
+        if not isinstance(perc, (int, float)) or perc < 0 or perc > 1:
+            raise ValueError("perc must be a scalar in [ 0, 1 ], got %s" % perc)
+        else:
+            n_dim_per_iter = max(1, int(perc * self._n_dim))
+        
         # Initialize models
         if xstart is None:
-            self._models[0,:] = self._random_model()
+            self._models[0,:] = np.random.uniform(-1., 1., self._n_dim)
         else:
-            self._models[0,:] = np.array(xstart)
-        self._energy[0] = self._func(self._models[0,:])
+            self._models[0,:] = self._standardize(xstart)
+        self._energy[0] = self._func(self._unstandardize(self._models[0,:]))
         
         # Metropolis-Hastings algorithm
         rejected = 0
-        for i in range(1, self._max_iter):
-            r1 = np.random.randn(self._n_dim)
-            self._models[i,:] = self._models[i-1,:] + r1 * stepsize
-            self._energy[i] = self._func(self._models[i,:])
-            
-            log_alpha = min(0., self._energy[i-1] - self._energy[i])
-            if log_alpha < np.log(np.random.rand()) \
-                or not self._in_search_space(self._models[i,:]):
-                rejected += 1
+        i = 0
+        while i < self._max_iter-1:
+            for j in np.arange(0, self._n_dim, n_dim_per_iter):
+                i += 1
+                jmax = min(self._n_dim, j + n_dim_per_iter - 1)
                 self._models[i,:] = self._models[i-1,:]
-                self._energy[i] = self._energy[i-1]
-        self._acceptance_ratio = 1. - rejected / self._max_iter
+                self._models[i,j:jmax+1] += np.random.randn(jmax-j+1) * stepsize[j:jmax+1]
+                self._energy[i] = self._func(self._unstandardize(self._models[i,:]))
+            
+                log_alpha = min(0., self._energy[i-1] - self._energy[i])
+                if log_alpha < np.log(np.random.rand()) \
+                    or not self._in_search_space(self._models[i,:]):
+                    rejected += 1
+                    self._models[i,:] = self._models[i-1,:]
+                    self._energy[i] = self._energy[i-1]
+                    
+                if i == self._max_iter-1:
+                    break
                 
         # Return best model
-        xopt, gfit = self._best_model()
-        self._xopt = xopt
-        self._gfit = gfit
-        return xopt, gfit
+        idx = np.argmin(self._energy)
+        self._models = self._unstandardize(self._models)
+        self._xopt = self._models[idx]
+        self._gfit = self._energy[idx]
+        self._acceptance_ratio = 1. - rejected / self._max_iter
+        return self._xopt, self._gfit
         
-    def _hamiltonian(self, fprime = None, stepsize = 0.1, n_leap = 10, xstart = None,
-                    delta = 1e-3, snap_leap = False, args = (), kwargs = {}):
+    def _hamiltonian(self, fprime = None, stepsize = 0.01, n_leap = 10, xstart = None,
+                     delta = 1e-3, snap_leap = False, args = (), kwargs = {}):
         """
         Sample the parameter space using the Hamiltonian (Hybrid) Monte-Carlo
         algorithm.
@@ -320,7 +346,7 @@ class MonteCarlo:
             required for its computation should be passed in 'args' and/or
             'kwargs'. If 'fprime' is None, the gradient is computed numerically
             with a centred finite-difference scheme.
-        stepsize : scalar, optional, default 0.1
+        stepsize : scalar, optional, default 0.01
             Leap-frog step size.
         n_leap : int, optional, default 10
             Number of leap-frog steps.
@@ -361,10 +387,10 @@ class MonteCarlo:
         
         # Initialize models
         if xstart is None:
-            self._models[0,:] = self._random_model()
+            self._models[0,:] = np.random.uniform(-1., 1., self._n_dim)
         else:
-            self._models[0,:] = np.array(xstart)
-        self._energy[0] = self._func(self._models[0,:])
+            self._models[0,:] = self._standardize(xstart)
+        self._energy[0] = self._func(self._unstandardize(self._models[0,:]))
         
         # Save leap frog trajectory
         if snap_leap:
@@ -377,7 +403,7 @@ class MonteCarlo:
             p = np.random.randn(self._n_dim)            # Random momentum
             q0, p0 = np.array(q), np.array(p)
             if snap_leap:
-                self._leap_frog[i-1,:,0] = np.array(q)
+                self._leap_frog[i-1,:,0] = self._unstandardize(q)
             
             p -= 0.5 * stepsize * grad(q)               # First half momentum step
             q += stepsize * p                           # First full position step
@@ -385,12 +411,12 @@ class MonteCarlo:
                 p -= stepsize * grad(q)                 # Momentum
                 q += stepsize * p                       # Position
                 if snap_leap:
-                    self._leap_frog[:,l+1,i-1] = np.array(q)
+                    self._leap_frog[:,l+1,i-1] = self._unstandardize(q)
             p -= 0.5 * stepsize * grad(q)               # Last half momentum step
             
-            U0 = self._func(q0)
+            U0 = self._func(self._unstandardize(q0))
             K0 = 0.5 * np.sum(p0**2)
-            U = self._func(q)
+            U = self._func(self._unstandardize(q))
             K = 0.5 * np.sum(p**2)
             log_alpha = min(0., U0 - U + K0 - K)
             if log_alpha < np.log(np.random.rand()) \
@@ -404,15 +430,17 @@ class MonteCarlo:
         self._acceptance_ratio = 1. - rejected / self._max_iter
         
         # Return best model
-        xopt, gfit = self._best_model()
-        self._xopt = xopt
-        self._gfit = gfit
-        return xopt, gfit
+        idx = np.argmin(self._energy)
+        self._models = self._unstandardize(self._models)
+        self._xopt = self._models[idx]
+        self._gfit = self._energy[idx]
+        self._acceptance_ratio = 1. - rejected / self._max_iter
+        return self._xopt, self._gfit
     
     def _approx_grad(self, x, delta = 1e-3):
         grad = np.zeros(self._n_dim)
         for i in range(self._n_dim):
-            x1, x2 = np.array(x), np.array(x)
+            x1, x2 = self._unstandardize(x), self._unstandardize(x)
             x1[i] -= delta
             x2[i] += delta
             grad[i] = 0.5 * ( self._func(x2) - self._func(x1) ) / delta
@@ -420,7 +448,7 @@ class MonteCarlo:
     
     def _in_search_space(self, x):
         if self._constrain:
-            return np.logical_and(np.all(x <= self._upper), np.all(x >= self._lower))
+            return np.logical_and(np.all(x <= 1.), np.all(x >= -1.))
         else:
             return True
         

@@ -7,7 +7,7 @@ StochOPy
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.5.2
+:Version: 1.6.0
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -129,6 +129,7 @@ Optimization is just as easy:
 Related works
 =============
 
+* `StochOPy WebApp <https://github.com/keurfonluu/stochopy-webapp>`__: StochOPy WebApp allows the users to see how popular stochastic algorithms perform on different benchmark functions.
 * `StochANNPy <https://github.com/keurfonluu/stochannpy>`__: StochANNPy (STOCHAstic Artificial Neural Network for PYthon) provides user-friendly routines compatible with Scikit-Learn for stochastic learning.
 
 

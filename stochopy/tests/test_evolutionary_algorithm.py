@@ -50,10 +50,8 @@ class EvolutionaryTest(unittest.TestCase):
         w = 0.42
         c1 = 1.409
         c2 = 1.991
-        l = 0.26
-        xopt, gfit = self.optimizer.optimize(solver = "pso", w = w, c1 = c1,
-                                             c2 = c2, l = l)
-        xopt_true = np.array([ 1.46014373, 2.13358457 ])
+        xopt, gfit = self.optimizer.optimize(solver = "pso", w = w, c1 = c1, c2 = c2)
+        xopt_true = np.array([ 0.70242052, 0.49260076 ])
         for i, val in enumerate(xopt):
             self.assertAlmostEqual(val, xopt_true[i])
             
@@ -77,13 +75,10 @@ class EvolutionaryTest(unittest.TestCase):
         w = 0.42
         c1 = 1.409
         c2 = 1.991
-        l = 0.26
         gamma = 0.8
-        delta = 0.1
         xopt, gfit = self.optimizer.optimize(solver = "cpso", w = w, c1 = c1,
-                                             c2 = c2, l = l, gamma = gamma,
-                                             delta = delta)
-        xopt_true = np.array([ 1.46014373, 2.13358457 ])
+                                             c2 = c2, gamma = gamma)
+        xopt_true = np.array([ 0.55554141, 0.30918171 ])
         for i, val in enumerate(xopt):
             self.assertAlmostEqual(val, xopt_true[i])
             

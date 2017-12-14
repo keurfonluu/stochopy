@@ -22,14 +22,14 @@ if __name__ == "__main__":
     func = "rastrigin"
     
     # Initialize function
-    bf = BenchmarkFunction(func, n_dim = 20)
+    bf = BenchmarkFunction(func, n_dim = 30)
     
     # Initialize solver
-    ea = Evolutionary(popsize = 20, max_iter = 1000, random_state = 2, **bf.get())
+    ea = Evolutionary(popsize = 30, max_iter = 2000, constrain = False, random_state = -1, **bf.get())
     
     # Solve
     starttime = time()
-    ea.optimize(solver = "de", CR = 0.1, F = 0.5, sync = False)
+    ea.optimize(solver = "cpso", sync = True)
     
     # Print solution
     print(ea)

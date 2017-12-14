@@ -30,10 +30,10 @@ if __name__ == "__main__":
     mpi_rank = mpi_comm.Get_rank()
     
     # Initialize function
-    bf = BenchmarkFunction(func, n_dim = 20)
+    bf = BenchmarkFunction(func, n_dim = 30)
     
     # Initialize solver
-    ea = Evolutionary(popsize = 20, max_iter = 10000, random_state = 42, mpi = True,
+    ea = Evolutionary(popsize = 30, max_iter = 2000, random_state = -1, mpi = True,
                       **bf.get())
     
     # Solve
