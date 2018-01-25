@@ -7,7 +7,7 @@ StochOPy
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.6.0
+:Version: 1.6.1
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -26,7 +26,7 @@ StochOPy provides routines for sampling of a model parameter space:
 * Pure Monte-Carlo
 * Metropolis-Hastings algorithm
 * Hamiltonian (Hybrid) Monte-Carlo [1]_ [2]_
-              
+
 or optimization of an objective function:
 
 * Differential Evolution [3]_
@@ -43,36 +43,36 @@ The recommended way to install StochOPy is through pip (internet required):
 .. code-block:: bash
 
     pip install stochopy
-    
+
 Otherwise, download and extract the package, then run:
 
 .. code-block:: bash
 
     python setup.py install
-    
+
 
 Usage
 =====
 
 **New in 1.4.0**: added support for MPI for evolutionary algorithms (you may
-need to install the package `MPI4PY <https://github.com/mpi4py/mpi4py>`__ beforehand).  
+need to install the package `MPI4PY <https://github.com/mpi4py/mpi4py>`__ beforehand).
 Run the example script inside the folder examples:
 
 .. code-block:: bash
 
   mpiexec -n 4 python example_mpi.py
-  
+
 Note that StochOPy still work even though MPI4PY is not installed.
-  
+
 **New in 1.3.0**: run StochOPy Viewer to see how popular stochastic algorithms
 work, and play with the tuning parameters on several benchmark functions.
 
 .. code-block:: python
 
   from stochopy.gui import main
-  
+
   main()
-  
+
 
 First, import StochOPy and define an objective function (here Rosenbrock):
 
@@ -80,9 +80,9 @@ First, import StochOPy and define an objective function (here Rosenbrock):
 
     import numpy as np
     from stochopy import MonteCarlo, Evolutionary
-    
+
     f = lambda x: 100*np.sum((x[1:]-x[:-1]**2)**2)+np.sum((1-x[:-1])**2)
-    
+
 You can define the search space boundaries if necessary:
 
 .. code-block:: python
@@ -90,14 +90,14 @@ You can define the search space boundaries if necessary:
     n_dim = 2
     lower = np.full(n_dim, -5.12)
     upper = np.full(n_dim, 5.12)
-    
+
 Initialize the Monte-Carlo sampler:
 
 .. code-block:: python
 
     max_iter = 1000
     mc = MonteCarlo(f, lower = lower, upper = upper, max_iter = max_iter)
-    
+
 Now, you can start sampling with the simple method 'sample':
 
 .. code-block:: python
@@ -111,7 +111,7 @@ The models sampled and their corresponding energies are stored in:
 
     print(mc.models)
     print(mc.energy)
-    
+
 Optimization is just as easy:
 
 .. code-block:: python
@@ -124,8 +124,8 @@ Optimization is just as easy:
     xopt, gfit = ea.optimize(solver = "cmaes")
     print(xopt)
     print(gfit)
-    
-    
+
+
 Related works
 =============
 

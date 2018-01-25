@@ -651,7 +651,7 @@ class StochOGUI():
         self.CR.set(0.1)
         self.F.set(0.5)
         self.strategy.set("best2")
-        self.sigma.set(1.)
+        self.sigma.set(0.5)
         self.mu_perc.set(0.5)
         self.seed.set(42)
         self.fix_seed.set(False)

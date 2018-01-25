@@ -14,4 +14,4 @@ from .benchmark_functions import BenchmarkFunction
 from .gui import StochOGUI
 
 __all__ = [ "MonteCarlo", "Evolutionary", "BenchmarkFunction", "StochOGUI" ]
-__version__ = "1.6.0"
+__version__ = "1.6.1"

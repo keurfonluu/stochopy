@@ -163,7 +163,7 @@ class Evolutionary:
     def optimize(self, solver = "cpso", xstart = None, sync = True,
                  w = 0.7298, c1 = 1.49618, c2 = 1.49618, gamma = 1.,
                  F = 0.5, CR = 0.1, strategy = "best2",
-                 sigma = 1., mu_perc = 0.5):
+                 sigma = 0.5, mu_perc = 0.5):
         """
         Minimize an objective function using Differential Evolution (DE),
         Particle Swarm Optimization (PSO), Competitive Particle Swarm
@@ -202,7 +202,7 @@ class Evolutionary:
             - 'rand2', mutate a random vector by adding two scaled difference vectors.
             - 'best1', mutate the best vector by adding one scaled difference vector.
             - 'best2', mutate the best vector by adding two scaled difference vectors.
-        sigma : scalar, optional, default 1.
+        sigma : scalar, optional, default 0.5
             Step size. Only used when solver = 'cmaes'.
         mu_perc : scalar, optional, default 0.5
             Number of parents as a percentage of population size. Only used
@@ -281,7 +281,8 @@ class Evolutionary:
             xopt, gfit = self._de(F = F, CR = CR, strategy = strategy,
                                   xstart = xstart, sync = sync)
         elif solver == "cmaes":
-            xopt, gfit = self._cmaes(sigma = sigma, mu_perc = mu_perc)
+            xopt, gfit = self._cmaes(sigma = sigma, mu_perc = mu_perc,
+                                     xstart = xstart)
         return xopt, gfit
     
     def _standardize(self, models):
@@ -814,14 +815,14 @@ class Evolutionary:
             self._energy = self._energy[:,:it]
         return xopt, gfit
         
-    def _cmaes(self, sigma = 1., mu_perc = 0.5, xstart = None):
+    def _cmaes(self, sigma = 0.5, mu_perc = 0.5, xstart = None):
         """
         Minimize an objective function using Covariance Matrix Adaptation
         - Evolution Strategy (CMA-ES).
         
         Parameters
         ----------
-        sigma : scalar, optional, default 1.
+        sigma : scalar, optional, default 0.5
             Step size.
         mu_perc : scalar, optional, default 0.5
             Number of parents as a percentage of population size.
