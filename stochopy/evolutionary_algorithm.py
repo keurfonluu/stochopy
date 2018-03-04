@@ -8,6 +8,7 @@ Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
 from warnings import warn
 try:
@@ -26,8 +27,8 @@ class Evolutionary:
     
     This optimizer minimizes an objective function using Differential
     Evolution (DE), Particle Swarm Optimization (PSO), Competitive Particle
-    Swarm Optimization (CPSO), or Covariance Matrix Adaptation - Evolution
-    Strategy (CMA-ES).
+    Swarm Optimization (CPSO), Covariance Matrix Adaptation - Evolution
+    Strategy (CMA-ES), or VD-CMA.
     
     Parameters
     ----------
@@ -167,17 +168,18 @@ class Evolutionary:
         """
         Minimize an objective function using Differential Evolution (DE),
         Particle Swarm Optimization (PSO), Competitive Particle Swarm
-        Optimization (CPSO), or Covariance Matrix Adaptation - Evolution
-        Strategy (CMA-ES).
+        Optimization (CPSO), Covariance Matrix Adaptation - Evolution
+        Strategy (CMA-ES), or VD-CMA.
         
         Parameters
         ----------
-        solver : {'de', 'pso', 'cpso', 'cmaes'}, default 'cpso'
+        solver : {'de', 'pso', 'cpso', 'cmaes', 'vdcma'}, default 'cpso'
             Optimization method.
             - 'de', Differential Evolution.
             - 'pso', Particle Swarm Optimization.
             - 'cpso', Competitive Particle Swarm Optimization.
             - 'cmaes', Covariance Matrix Adaptation - Evolution Strategy.
+            - 'vdcma', VD-CMA.
         xstart : None or ndarray, optional, default None
             Initial positions of the population or mean (if solver = 'cmaes').
         sync : bool, optional, default True
@@ -203,10 +205,10 @@ class Evolutionary:
             - 'best1', mutate the best vector by adding one scaled difference vector.
             - 'best2', mutate the best vector by adding two scaled difference vectors.
         sigma : scalar, optional, default 0.5
-            Step size. Only used when solver = 'cmaes'.
+            Step size. Only used when solver = {'cmaes', 'vdcma'}.
         mu_perc : scalar, optional, default 0.5
             Number of parents as a percentage of population size. Only used
-            when solver = 'cmaes'.
+            when solver = {'cmaes', 'vdcma'}.
             
         Returns
         -------
@@ -249,8 +251,8 @@ class Evolutionary:
         >>> xopt, gfit = ea.optimize(solver = "cmaes")
         """
         # Check input
-        if not isinstance(solver, str) or solver not in [ "cpso", "pso", "de", "cmaes" ]:
-            raise ValueError("solver must either be 'cpso', 'pso', 'de' or 'cmaes', got %s" % solver)
+        if not isinstance(solver, str) or solver not in [ "cpso", "pso", "de", "cmaes", "vdcma" ]:
+            raise ValueError("solver must either be 'cpso', 'pso', 'de', 'cmaes' or 'vdcma', got %s" % solver)
         if not isinstance(sync, bool):
             raise ValueError("sync must either be True or False")
         if self._mpi and solver in [ "cpso", "pso", "de" ] and not sync:
@@ -283,6 +285,9 @@ class Evolutionary:
         elif solver == "cmaes":
             xopt, gfit = self._cmaes(sigma = sigma, mu_perc = mu_perc,
                                      xstart = xstart)
+        elif solver == "vdcma":
+            xopt, gfit = self._vdcma(sigma = sigma, mu_perc = mu_perc,
+                                     xstart = xstart)
         return xopt, gfit
     
     def _standardize(self, models):
@@ -304,12 +309,12 @@ class Evolutionary:
             self._mpi_comm.Barrier()
             self._mpi_comm.Bcast([ models, MPI.DOUBLE ], root = 0)
             for i in np.arange(self._mpi_rank, n, self._mpi_size):
-                fit_mpi[i] = self._func(self._unstandardize(models[i,:]))
+                fit_mpi[i] = self._func(self._unstandardize(models[i]))
             self._mpi_comm.Barrier()
             self._mpi_comm.Allreduce([ fit_mpi, MPI.DOUBLE ], [ fit, MPI.DOUBLE ],
                                      op = MPI.SUM)
         else:
-            fit = np.array([ self._func(self._unstandardize(models[i,:])) for i in range(n) ])
+            fit = np.array([ self._func(self._unstandardize(models[i])) for i in range(n) ])
         return fit
     
     def _constrain_de(self, models):
@@ -343,41 +348,75 @@ class Evolutionary:
             models = models_old + beta * (models - models_old)
         return models
     
-    def _de_mutation_sync(self, X, F, gbest, strategy):
-        idx = [ list(range(self._popsize)) for i in range(self._popsize) ]
-        for i, l in enumerate(idx):
-            l.remove(i)
-            l = np.random.shuffle(l)
-        idx = np.array(idx)
-        if strategy == "rand1":
-            X1 = np.array([ X[i,:] for i in idx[:,0] ])
-            X2 = np.array([ X[i,:] for i in idx[:,1] ])
-            X3 = np.array([ X[i,:] for i in idx[:,2] ])
-            V = X1 + F * (X2 - X3)
-        elif strategy == "rand2":
-            X1 = np.array([ X[i,:] for i in idx[:,0] ])
-            X2 = np.array([ X[i,:] for i in idx[:,1] ])
-            X3 = np.array([ X[i,:] for i in idx[:,2] ])
-            X4 = np.array([ X[i,:] for i in idx[:,3] ])
-            X5 = np.array([ X[i,:] for i in idx[:,4] ])
-            V = X1 + F * (X2 + X3 - X4 - X5)
-        elif strategy == "best1":
-            X1 = np.array([ X[i,:] for i in idx[:,0] ])
-            X2 = np.array([ X[i,:] for i in idx[:,1] ])
-            V = gbest + F * (X1 - X2)
-        elif strategy == "best2":
-            X1 = np.array([ X[i,:] for i in idx[:,0] ])
-            X2 = np.array([ X[i,:] for i in idx[:,1] ])
-            X3 = np.array([ X[i,:] for i in idx[:,2] ])
-            X4 = np.array([ X[i,:] for i in idx[:,3] ])
-            V = gbest + F * (X1 + X2 - X3 - X4)
-        return V
+    def _constrain_cma(self, arxvalid, arx, xmean, xold, sigma, diagC, mueff, it,
+                       bnd_weights, dfithist, validfitval, iniphase):
+        """
+        Box constraint handling by adding a penalty term that quantifies the
+        distance of the parameters from the feasible parameter space.
+        """
+        # Clip to boundaries
+        arxvalid = np.where(arxvalid < -1., -np.ones_like(arxvalid), arxvalid)
+        arxvalid = np.where(arxvalid > 1., np.ones_like(arxvalid), arxvalid)
+        arfitness = self._eval_models(arxvalid)
+        
+        # Get delta fitness values
+        perc = np.percentile(arfitness, [ 25, 75 ])
+        delta = ( perc[1] - perc[0] ) / self._n_dim / np.mean(diagC) / sigma**2
+        
+        # Catch non-sensible values
+        if delta == 0:
+            delta = np.min(dfithist[dfithist > 0.])
+        elif not validfitval:
+            dfithist = np.array([])
+            validfitval = True
+            
+        # Store delta fitness values
+        if len(dfithist) < 20 + (3.*self._n_dim) / self._popsize:
+            dfithist = np.append(dfithist, delta)
+        else:
+            dfithist = np.append(dfithist[1:len(dfithist)+1], delta)
+            
+        # Corrected mean
+        ti = np.logical_or(xmean < -1., xmean > 1.)
+        tx = np.where(xmean < -1., -np.ones_like(xmean), xmean)
+        tx = np.where(xmean > 1., np.ones_like(xmean), xmean)
+        
+        # Set initial weights
+        if iniphase:
+            if np.any(ti):
+                bnd_weights.fill(2.0002 * np.median(dfithist))
+                if validfitval and it > 2:
+                    iniphase = False
+                    
+        if np.any(ti):
+            tx = xmean - tx
+            idx = np.logical_and(ti, np.abs(tx) > 3. * max( 1., np.sqrt(self._n_dim/mueff) ) \
+                                 * sigma * np.sqrt(diagC))
+            idx = np.logical_and(idx, np.sign(tx) == np.sign(xmean - xold))
+            bnd_weights = np.array([ w*1.2**min(1., mueff/10./self._n_dim) if i else w
+                                        for i, w in zip(idx, bnd_weights) ])
+                    
+        # Calculate scaling biased to unity, product is one
+        bnd_scale = np.exp( 0.9 * ( np.log(diagC) - np.mean(np.log(diagC)) ) )
+        
+        # Assigned penalized fitness
+        arfitness = self._eval_models(arxvalid) \
+                    + np.dot((arxvalid - arx)**2, bnd_weights / bnd_scale)
+        return arfitness, bnd_weights, dfithist, validfitval, iniphase
     
-    def _de_mutation_async(self, i, X, F, gbest, strategy):
-        idx = list(range(self._popsize))
-        idx.remove(i)
-        np.random.shuffle(idx)
-        idx = np.array(idx)
+    def _de_mutation(self, X, F, gbest, strategy, sync, i = None):
+        if sync:
+            idx = [ list(range(self._popsize)) for i in range(self._popsize) ]
+            for i, l in enumerate(idx):
+                l.remove(i)
+                l = np.random.shuffle(l)
+            idx = np.transpose(idx)
+        else:
+            idx = list(range(self._popsize))
+            idx.remove(i)
+            np.random.shuffle(idx)
+            idx = np.array(idx)
+            
         if strategy == "rand1":
             X1 = np.array(X[idx[0],:])
             X2 = np.array(X[idx[1],:])
@@ -438,24 +477,7 @@ class Evolutionary:
                Spaces*, Journal of Global Optimization, 1997, 11(4): 341-359
         """
         # Check inputs
-        if self._popsize <= 3 and strategy not in [ "rand2", "best2" ]:
-            self._popsize = 4
-            warn("\npopsize cannot be lower than 4 for DE, popsize set to 4", UserWarning)
-        elif self._popsize <= 4 and strategy == "best2":
-            self._popsize = 5
-            warn("\npopsize cannot be lower than 5 for DE, popsize set to 5", UserWarning)
-        elif self._popsize <= 5 and strategy == "rand2":
-            self._popsize = 6
-            warn("\npopsize cannot be lower than 6 for DE, popsize set to 6", UserWarning)
-        if not isinstance(F, float) and not isinstance(F, int) or not 0. <= F <= 2.:
-            raise ValueError("F must be an integer or float in [ 0, 2 ], got %s" % F)
-        if not isinstance(CR, float) and not isinstance(CR, int) or not 0. <= CR <= 1.:
-            raise ValueError("CR must be an integer or float in [ 0, 1 ], got %s" % CR)
-        if strategy not in [ "rand1", "rand2", "best1", "best2" ]:
-            raise ValueError("strategy should either be 'rand1', 'rand2', 'best1' or 'best2'")
-        if xstart is not None and isinstance(xstart, np.ndarray) \
-            and xstart.shape != (self._popsize, self._n_dim):
-            raise ValueError("xstart must be a ndarray of shape (popsize, n_dim)")
+        self._check_inputs(F, CR, strategy, xstart)
         
         # Population initial positions
         if xstart is None:
@@ -487,7 +509,7 @@ class Evolutionary:
             # Synchronous population
             if sync:
                 # Mutation
-                V = self._de_mutation_sync(X, F, gbest, strategy)
+                V = self._de_mutation(X, F, gbest, strategy, sync)
                 
                 # Recombination
                 mask = np.zeros_like(r1, dtype = bool)
@@ -504,50 +526,50 @@ class Evolutionary:
                 self._n_eval += self._popsize
                 idx = pfit < pbestfit
                 pbestfit[idx] = pfit[idx]
-                X[idx,:] = U[idx,:]
+                X[idx] = U[idx]
                 
                 # Update best individual
                 gbidx = np.argmin(pbestfit)
                 
                 # Stop if best individual position changes less than eps1
-                if np.linalg.norm(gbest - X[gbidx,:]) <= self._eps1 \
+                if np.linalg.norm(gbest - X[gbidx]) <= self._eps1 \
                     and pbestfit[gbidx] <= self._eps2:
                     converge = True
-                    xopt = self._unstandardize(X[gbidx,:])
+                    xopt = self._unstandardize(X[gbidx])
                     gfit = pbestfit[gbidx]
                     self._flag = 0
                     
                 # Stop if fitness is less than eps2
                 elif pbestfit[gbidx] <= self._eps2:
                     converge = True
-                    xopt = self._unstandardize(X[gbidx,:])
+                    xopt = self._unstandardize(X[gbidx])
                     gfit = pbestfit[gbidx]
                     self._flag = 1
                 
                 # Stop if maximum iteration is reached
                 elif it >= self._max_iter:
                     converge = True
-                    xopt = self._unstandardize(X[gbidx,:])
+                    xopt = self._unstandardize(X[gbidx])
                     gfit = pbestfit[gbidx]
                     self._flag = -1
                 
                 # Otherwise, update best individual
                 else:
-                    gbest = np.array(X[gbidx,:])
+                    gbest = np.array(X[gbidx])
                     gfit = pbestfit[gbidx]
                     
             # Asynchronous population
             else:
                 for i in range(self._popsize):
                     # Mutation
-                    V = self._de_mutation_async(i, X, F, gbest, strategy)
+                    V = self._de_mutation(X, F, gbest, strategy, sync, i)
                     
                     # Recombination
                     mask = np.zeros(self._n_dim, dtype = bool)
                     irand = np.random.randint(self._n_dim)
                     mask[irand] = True
-                    mask = np.logical_or(mask, r1[i,:] <= CR)
-                    U = np.where(mask, V, X[i,:])
+                    mask = np.logical_or(mask, r1[i] <= CR)
+                    U = np.where(mask, V, X[i])
                     if self._constrain:
                         U = self._constrain_de(U)
                         
@@ -555,29 +577,29 @@ class Evolutionary:
                     pfit[i] = self._func(self._unstandardize(U))
                     self._n_eval += 1
                     if pfit[i] < pbestfit[i]:
-                        X[i,:] = np.array(U)
+                        X[i] = np.array(U)
                         pbestfit[i] = pfit[i]
                         
                         # Update best individual
                         if pfit[i] < gfit:
                             # Stop if best individual position changes less than eps1
-                            if np.linalg.norm(gbest - X[i,:]) <= self._eps1 \
+                            if np.linalg.norm(gbest - X[i]) <= self._eps1 \
                                 and pfit[i] <= self._eps2:
                                 converge = True
-                                xopt = self._unstandardize(X[i,:])
+                                xopt = self._unstandardize(X[i])
                                 gfit = pbestfit[i]
                                 self._flag = 0
                                 
                             # Stop if fitness is less than eps2
                             elif pfit[i] <= self._eps2:
                                 converge = True
-                                xopt = self._unstandardize(X[i,:])
+                                xopt = self._unstandardize(X[i])
                                 gfit = pbestfit[i]
                                 self._flag = 1
                 
                             # Otherwise, update best individual
                             else:
-                                gbest = np.array(X[i,:])
+                                gbest = np.array(X[i])
                                 gfit = pfit[i]
                                 
                 # Stop if maximum iteration is reached
@@ -635,23 +657,13 @@ class Evolutionary:
                Networks, 1995, 4: 1942-1948
         .. [2] F. Van Den Bergh, *An analysis of particle swarm optimizers*,
                University of Pretoria, 2001
-        .. [3] K. Luu, M. Noble and A. Gesret, *A competitive particle swarm
-               optimization for nonlinear first arrival traveltime tomography*,
-               In SEG Technical Program Expanded Abstracts 2016 (pp. 2740-2744).
-               Society of Exploration Geophysicists.
+        .. [3] K. Luu, M. Noble and A. Gesret, *A parallel competitive Particle
+               Swarm Optimization for non-linear first arrival traveltime
+               tomography and uncertainty quantification*,
+               Computers & Geosciences, 2018, 113: 81-93
         """
         # Check inputs
-        if not isinstance(w, float) and not isinstance(w, int) or not 0. <= w <= 1.:
-            raise ValueError("w must be an integer or float in [ 0, 1 ], got %s" % w)
-        if not isinstance(c1, float) and not isinstance(c1, int) or not 0. <= c1 <= 4.:
-            raise ValueError("c1 must be an integer or float in [ 0, 4 ], got %s" % c1)
-        if not isinstance(c2, float) and not isinstance(c2, int) or not 0. <= c2 <= 4.:
-            raise ValueError("c2 must be an integer or float in [ 0, 4 ], got %s" % c2)
-        if not isinstance(gamma, float) and not isinstance(gamma, int) or not 0. <= gamma <= 2.:
-            raise ValueError("gamma must be an integer or float in [ 0, 2 ], got %s" % gamma)
-        if xstart is not None and isinstance(xstart, np.ndarray) \
-            and xstart.shape != (self._popsize, self._n_dim):
-            raise ValueError("xstart must be a ndarray of shape (popsize, n_dim)")
+        self._check_inputs(w, c1, c2, gamma, xstart)
         
         # Particles initial positions
         if xstart is None:
@@ -675,7 +687,7 @@ class Evolutionary:
         # Initialize best individual
         gbidx = np.argmin(pbestfit)
         gfit = pbestfit[gbidx]
-        gbest = np.array(X[gbidx,:])
+        gbest = np.array(X[gbidx])
         
         # Swarm maximum radius
         delta = np.log(1. + 0.003 * self._popsize) / np.max((0.2, np.log(0.01*self._max_iter)))
@@ -703,76 +715,75 @@ class Evolutionary:
                 self._n_eval += self._popsize
                 idx = pfit < pbestfit
                 pbestfit[idx] = np.array(pfit[idx])
-                pbest[idx,:] = np.array(X[idx,:])
+                pbest[idx] = np.array(X[idx])
                 
                 # Update best individual
                 gbidx = np.argmin(pbestfit)
                 
                 # Stop if best individual position changes less than eps1
-                if np.linalg.norm(gbest - pbest[gbidx,:]) <= self._eps1 \
+                if np.linalg.norm(gbest - pbest[gbidx]) <= self._eps1 \
                     and pbestfit[gbidx] <= self._eps2:
                     converge = True
-                    xopt = self._unstandardize(pbest[gbidx,:])
+                    xopt = self._unstandardize(pbest[gbidx])
                     gfit = pbestfit[gbidx]
                     self._flag = 0
                     
                 # Stop if fitness is less than eps2
                 elif pbestfit[gbidx] <= self._eps2:
                     converge = True
-                    xopt = self._unstandardize(pbest[gbidx,:])
+                    xopt = self._unstandardize(pbest[gbidx])
                     gfit = pbestfit[gbidx]
                     self._flag = 1
                 
                 # Stop if maximum iteration is reached
                 elif it >= self._max_iter:
                     converge = True
-                    xopt = self._unstandardize(pbest[gbidx,:])
+                    xopt = self._unstandardize(pbest[gbidx])
                     gfit = pbestfit[gbidx]
                     self._flag = -1
                 
                 # Otherwise, update best individual
                 else:
-                    gbest = np.array(pbest[gbidx,:])
+                    gbest = np.array(pbest[gbidx])
                     gfit = pbestfit[gbidx]
                     
             # Asynchronous population
             else:
                 for i in range(self._popsize):
                     # Mutation
-                    V[i,:] = w * V[i,:] + c1 * r1[i,:] * (pbest[i,:] - X[i,:]) \
-                                        + c2 * r2[i,:] * (gbest - X[i,:])
+                    V[i] = w * V[i] + c1 * r1[i] * (pbest[i] - X[i]) + c2 * r2[i] * (gbest - X[i])
                     if self._constrain:
-                        X[i,:] = self._constrain_cpso(X[i,:] + V[i,:], X[i,:])
+                        X[i] = self._constrain_cpso(X[i] + V[i], X[i])
                     else:
-                        X[i,:] += V[i,:]
+                        X[i] += V[i]
                         
                     # Selection
-                    pfit[i] = self._func(self._unstandardize(X[i,:]))
+                    pfit[i] = self._func(self._unstandardize(X[i]))
                     self._n_eval += 1
                     if pfit[i] < pbestfit[i]:
-                        pbest[i,:] = np.array(X[i,:])
+                        pbest[i] = np.array(X[i])
                         pbestfit[i] = pfit[i]
                         
                         # Update best individual
                         if pfit[i] < gfit:
                             # Stop if best individual position changes less than eps1
-                            if np.linalg.norm(gbest - X[i,:]) <= self._eps1 \
+                            if np.linalg.norm(gbest - X[i]) <= self._eps1 \
                                 and pfit[i] <= self._eps2:
                                 converge = True
-                                xopt = self._unstandardize(X[i,:])
+                                xopt = self._unstandardize(X[i])
                                 gfit = pbestfit[i]
                                 self._flag = 0
                                 
                             # Stop if fitness is less than eps2
                             elif pfit[i] <= self._eps2:
                                 converge = True
-                                xopt = self._unstandardize(X[i,:])
+                                xopt = self._unstandardize(X[i])
                                 gfit = pbestfit[i]
                                 self._flag = 1
                 
                             # Otherwise, update best individual
                             else:
-                                gbest = np.array(X[i,:])
+                                gbest = np.array(X[i])
                                 gfit = pfit[i]
                                 
                 # Stop if maximum iteration is reached
@@ -789,8 +800,7 @@ class Evolutionary:
             # Competitive PSO algorithm
             if not converge and gamma > 0.:
                 # Evaluate swarm size
-                swarm_radius = np.max([ np.linalg.norm(X[i,:] - gbest)
-                                        for i in range(self._popsize) ])
+                swarm_radius = np.max([ np.linalg.norm(X[i] - gbest) for i in range(self._popsize) ])
                 swarm_radius /= np.sqrt(4.*self._n_dim)
                 
                 # Restart particles if swarm size is lower than threshold
@@ -802,9 +812,9 @@ class Evolutionary:
                     if nw > 0:
                         self._n_restart += 1
                         idx = pbestfit.argsort()[:-nw-1:-1]
-                        V[idx,:] = np.zeros((nw, self._n_dim))
-                        X[idx,:] = np.random.uniform(-1., 1., (nw, self._n_dim))
-                        pbest[idx,:] = np.array(X[idx,:])
+                        V[idx] = np.zeros((nw, self._n_dim))
+                        X[idx] = np.random.uniform(-1., 1., (nw, self._n_dim))
+                        pbest[idx] = np.array(X[idx])
                         pbestfit[idx] = np.full(nw, 1e30)
                 
         self._xopt = np.array(xopt)
@@ -842,16 +852,7 @@ class Evolutionary:
                Université Paris-Saclay, LRI, 2011, 102: 1-34
         """
         # Check inputs
-        if self._popsize <= 3:
-            self._popsize = 4
-            warn("\npopsize cannot be lower than 4 for CMA-ES, popsize set to 4", UserWarning)
-        if not isinstance(sigma, float) and not isinstance(sigma, int) or sigma <= 0.:
-            raise ValueError("sigma must be positive, got %s" % sigma)
-        if not isinstance(mu_perc, float) and not isinstance(mu_perc, int) or not 0. < mu_perc <= 1.:
-            raise ValueError("mu_perc must be an integer or float in ] 0, 1 ], got %s" % mu_perc)
-        if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.ndarray)) \
-            and len(xstart) != self._n_dim:
-            raise ValueError("xstart must be a list or ndarray of length n_dim")
+        self._check_inputs(sigma, mu_perc, xstart)
         
         # Initialize saved outputs
         if self._snap:
@@ -891,7 +892,6 @@ class Evolutionary:
         
         # Initialize boundaries weights
         bnd_weights = np.zeros(self._n_dim)
-        bnd_scale = np.zeros(self._n_dim)
         dfithist = np.array([ 1. ])
         
         # (mu, lambda)-CMA-ES
@@ -915,54 +915,10 @@ class Evolutionary:
                 
             # Evaluate fitness
             if self._constrain:
-                # Clip to boundaries
-                arxvalid = np.where(arxvalid < -1., -np.ones_like(arxvalid), arxvalid)
-                arxvalid = np.where(arxvalid > 1., np.ones_like(arxvalid), arxvalid)
-                arfitness = self._eval_models(arxvalid)
-                
-                # Get delta fitness values
-                perc = np.percentile(arfitness, [ 25, 75 ])
-                delta = ( perc[1] - perc[0] ) / self._n_dim / np.mean(np.diag(C)) / sigma**2
-                
-                # Catch non-sensible values
-                if delta == 0:
-                    delta = np.min(dfithist[dfithist > 0.])
-                elif not validfitval:
-                    dfithist = np.array([])
-                    validfitval = True
-                    
-                # Store delta fitness values
-                if len(dfithist) < 20 + (3.*self._n_dim) / self._popsize:
-                    dfithist = np.append(dfithist, delta)
-                else:
-                    dfithist = np.append(dfithist[1:len(dfithist)+1], delta)
-                    
-                # Corrected mean
-                ti = np.logical_or(xmean < -1., xmean > 1.)
-                tx = np.where(xmean < -1., -np.ones_like(xmean), xmean)
-                tx = np.where(xmean > 1., np.ones_like(xmean), xmean)
-                
-                # Set initial weights
-                if iniphase:
-                    if np.any(ti):
-                        bnd_weights.fill(2.0002 * np.median(dfithist))
-                        if validfitval and it > 2:
-                            iniphase = False
-                            
-                if np.any(ti):
-                    tx = xmean - tx
-                    idx = np.logical_and(ti, np.abs(tx) > 3. * max( 1., np.sqrt(self._n_dim/mueff) ) \
-                                         * sigma * np.sqrt(np.diag(C)))
-                    idx = np.logical_and(idx, np.sign(tx) == np.sign(xmean - xold))
-                    bnd_weights = np.array([ w*1.2**min(1., mueff/10./self._n_dim) if i else w
-                                                for i, w in zip(idx, bnd_weights) ])
-                            
-                # Calculate scaling biased to unity, product is one
-                bnd_scale = np.exp( 0.9 * ( np.log(np.diag(C)) - np.mean(np.log(np.diag(C))) ) )
-                
-                # Assigned penalized fitness
-                arfitness = self._eval_models(arxvalid) \
-                            + np.dot((arxvalid - arx)**2, bnd_weights / bnd_scale)
+                diagC = np.diag(C)
+                arfitness, bnd_weights, dfithist, validfitval, iniphase = self._constrain_cma(
+                        arxvalid, arx, xmean, xold, sigma, diagC, mueff, it,
+                        bnd_weights, dfithist, validfitval, iniphase)
             else:
                 arfitness = self._eval_models(arxvalid)
             self._n_eval += self._popsize
@@ -1063,12 +1019,12 @@ class Evolutionary:
                 converge = True
                 self._flag = 7
                 
-            # TolX: stop if x-changes smaller than 1e-11 times inigial sigma
+            # TolX: stop if x-changes smaller than 1e-11 times initial sigma
             if not converge and np.all( sigma * np.max(np.append(np.abs(pc), np.sqrt(np.diag(C)))) < 1e-11 * insigma ):
                 converge = True
                 self._flag = 8
                 
-        xopt = self._unstandardize(arx[arindex[0],:])
+        xopt = self._unstandardize(arx[arindex[0]])
         gfit = arfitness[arindex[0]]
         self._xopt = np.array(xopt)
         self._gfit = gfit
@@ -1078,6 +1034,315 @@ class Evolutionary:
             self._energy = self._energy[:,:it]
             self._means = self._means[:it,:]
         return xopt, gfit
+    
+    def _vdcma(self, sigma = 0.5, mu_perc = 0.5, xstart = None):
+        """
+        Minimize an objective function using VD-CMA.
+        
+        Parameters
+        ----------
+        sigma : scalar, optional, default 0.5
+            Step size.
+        mu_perc : scalar, optional, default 0.5
+            Number of parents as a percentage of population size.
+        xstart : None or ndarray, optional, default None
+            Initial position of the mean.
+            
+        Returns
+        -------
+        xopt : ndarray
+            Optimal solution found by the optimizer.
+        gfit : scalar
+            Objective function value of the optimal solution.
+        
+        References
+        ----------
+        .. [1] Y. Akimoto, A. Auger and N. Hansen, *Comparison-Based Natural
+               Gradient Optimization in High Dimension*, Proceedings of the
+               2014 conference on Genetic and evolutionary computation, 2014,
+               373-380
+        """
+        # Check inputs
+        self._check_inputs(sigma, mu_perc, xstart)
+        
+        # Initialize saved outputs
+        if self._snap:
+            self._init_models()
+            self._means = np.zeros((self._max_iter, self._n_dim))
+        
+        # Population initial positions
+        if xstart is None:
+            xmean = np.random.uniform(-1., 1., self._n_dim)
+        else:
+            xmean = self._standardize(xstart)
+        xold = np.array(xmean)
+        
+        # Number of parents
+        mu = int(mu_perc * self._popsize)
+        
+        # Strategy parameter setting: Selection
+        weights = np.log(mu + 0.5) - np.log(np.arange(1, mu+1))
+        weights /= np.sum(weights)
+        mueff = np.sum(weights)**2 / np.sum(weights**2)
+        
+        # Strategy parameter setting: Adaptation
+        cc = ( 4. + mueff / self._n_dim ) / ( self._n_dim + 4. + 2. * mueff / self._n_dim )
+        cfactor = ( self._n_dim - 5. ) / 6.
+        c1 = cfactor * 2. / ( ( self._n_dim + 1.3 )**2 + mueff )
+        cmu = min(1. - c1, cfactor * 2. * ( mueff - 2. + 1. / mueff ) / ( ( self._n_dim + 2. )**2 + mueff) )
+        
+        # Initialize dynamic (internal) strategy parameters and constants
+        flg_injection = False
+        cs = 0.3
+        ds = np.sqrt(self._n_dim)
+        dx = np.zeros(self._n_dim)
+        ps = 0.
+        dvec = np.ones(self._n_dim)
+        vvec = np.random.normal(0., 1., self._n_dim) / np.sqrt(self._n_dim)
+        norm_v2 = np.dot(vvec, vvec)
+        norm_v = np.sqrt(norm_v2)
+        vn = vvec / norm_v
+        vnn = vn**2
+        pc = np.zeros(self._n_dim)
+        
+        # Initialize boundaries weights
+        bnd_weights = np.zeros(self._n_dim)
+        dfithist = np.array([ 1. ])
+        
+        # VD-CMA
+        self._n_eval = 0
+        it = 0
+        arbestfitness = np.zeros(self._max_iter)
+        ilim = int(10 + 30 * self._n_dim / self._popsize)
+        insigma = sigma
+        validfitval = False
+        iniphase = True
+        converge = False
+        
+        while not converge:
+            it += 1
+            
+            # Generate lambda offsprings
+            arz = np.random.randn(self._popsize, self._n_dim)
+            ary = dvec * ( arz + ( np.sqrt( 1. + norm_v2 ) - 1. ) * np.outer(np.dot(arz, vn), vn) )
+            if flg_injection:
+                ddx = dx / dvec
+                mnorm = (ddx**2).sum() - np.dot(ddx, vvec)**2 / ( 1. + norm_v2 )
+                dy = ( np.linalg.norm(np.random.randn(self._n_dim)) / np.sqrt(mnorm) ) * dx
+                ary[0] = dy
+                ary[1] = -dy
+            arx = xmean + sigma * ary
+            arxvalid = np.array(arx)
+                
+            # Evaluate fitness
+            if self._constrain:
+                diagC = np.diag(np.cov(arx.T)) / sigma**2
+                arfitness, bnd_weights, dfithist, validfitval, iniphase = self._constrain_cma(
+                        arxvalid, arx, xmean, xold, sigma, diagC, mueff, it,
+                        bnd_weights, dfithist, validfitval, iniphase)
+            else:
+                arfitness = self._eval_models(arxvalid)
+            self._n_eval += self._popsize
+            if self._snap:
+                self._models[:,:,it-1] = self._unstandardize(arx)
+                self._energy[:,it-1] = np.array(arfitness)
+                self._means[it-1,:] = self._unstandardize(xmean)
+            
+            # Sort by fitness and compute weighted mean into xmean
+            arindex = np.argsort(arfitness)
+            dx = np.dot(weights, arx[arindex[:mu]]) - np.sum(weights) * xmean
+            xold = np.array(xmean)
+            xmean += dx
+            
+            # Save best fitness
+            arbestfitness[it-1] = arfitness[arindex[0]]
+    
+            # Update sigma
+            if flg_injection:
+                alpha_act = np.where(arindex == 1)[0][0] - np.where(arindex == 0)[0][0]
+                alpha_act /= self._popsize - 1.
+                ps += cs * ( alpha_act - ps )
+                sigma *= np.exp( ps / ds )
+                hsig = ps < 0.5
+            else:
+                flg_injection = True
+                hsig = True
+    
+            # Cumulation
+            pc = ( 1. - cc ) * pc + hsig * np.sqrt( cc * ( 2. - cc ) * mueff ) * np.dot(weights, ary[arindex[:mu]])
+    
+            # Alpha and related variables
+            gamma = 1. / np.sqrt(1. + norm_v2)
+            alpha = np.sqrt( norm_v2**2 + ( 1. + norm_v2 ) / max(vnn) * ( 2. - gamma ) ) / ( 2. + norm_v2 )
+            if alpha < 1.:
+                beta = ( 4. - ( 2. - gamma ) / max(vnn) ) / ( 1. + 2. / norm_v2 )**2
+            else:
+                alpha = 1.
+                beta = 0.
+            bsca = 2. * alpha**2 - beta
+            avec = 2. - ( bsca + 2. * alpha**2 ) * vnn
+            invavnn = vnn / avec
+            
+            # Rank-mu
+            if cmu == 0:
+                pvec_mu = np.zeros(self._n_dim)
+                qvec_mu = np.zeros(self._n_dim)
+            else:
+                pvec_mu, qvec_mu = self._pvec_and_qvec(vn, norm_v2, ary[arindex[:mu]] / dvec, weights)
+                
+            # Rank-one
+            if c1 == 0:
+                pvec_one = np.zeros(self._n_dim)
+                qvec_one = np.zeros(self._n_dim)
+            else:
+                pvec_one, qvec_one = self._pvec_and_qvec(vn, norm_v2, pc / dvec)
+                
+            # Add rank-one and rank-mu before computing the natural gradient
+            pvec = cmu * pvec_mu + hsig * c1 * pvec_one
+            qvec = cmu * qvec_mu + hsig * c1 * qvec_one
+            # Natural gradient
+            if cmu + c1 > 0:
+                ngv, ngd = self._ngv_ngd(dvec, vn, vnn, norm_v, norm_v2, alpha, avec, bsca, invavnn,
+                                         pvec, qvec)
+                # Truncation factor to guarantee at most 70 percent change
+                upfactor = 1.
+                upfactor = min( upfactor, 0.7 * norm_v / np.sqrt( np.dot(ngv, ngv) ) )
+                upfactor = min( upfactor, 0.7 * ( dvec / np.abs(ngd) ).min() )
+            else:
+                ngv = np.zeros(self._n_dim)
+                ngd = np.zeros(self._n_dim)
+                upfactor = 1.
+            # Update parameters
+            vvec += upfactor * ngv
+            dvec += upfactor * ngd
+    
+            # Update the constants
+            norm_v2 = np.dot(vvec, vvec)
+            norm_v = np.sqrt(norm_v2)
+            vn = vvec / norm_v
+            vnn = vn**2
+            
+            # Stop if maximum iteration is reached
+            if it >= self._max_iter:
+                converge = True
+                self._flag = -1
+            
+            # Stop if mean position changes less than eps1
+            if not converge and np.linalg.norm(xold - xmean) <= self._eps1 \
+                and arfitness[arindex[0]] < self._eps2:
+                converge = True
+                self._flag = 0
+                
+            # Stop if fitness is less than eps2
+            if not converge and arfitness[arindex[0]] <= self._eps2:
+                converge = True
+                self._flag = 1
+                
+            diagC = np.diag(np.cov(arx.T)) / sigma**2
+                
+            # NoEffectCoord: stop if too low coordinate axis deviations
+            if not converge and np.any( 0.2 * sigma * np.sqrt(diagC) < 1e-10 ):
+                converge = True
+                self._flag = 3
+            
+            # EqualFunValues: stop if the range of fitness values is zero
+            if not converge and it >= ilim:
+                if np.max(arbestfitness[it-ilim:it+1]) - np.min(arbestfitness[it-ilim:it+1]) < 1e-10:
+                    converge = True
+                    self._flag = 5
+                    
+            # TolXUp: stop if x-changes larger than 1e3 times initial sigma
+            if not converge and np.any( sigma * np.sqrt(diagC) > 1e3 * insigma ):
+                converge = True
+                self._flag = 6
+                
+            # TolFun: stop if fun-changes smaller than 1e-12
+            if not converge and it > 2 and np.max(np.append(arfitness, arbestfitness)) - np.min(np.append(arfitness, arbestfitness)) < 1e-12:
+                converge = True
+                self._flag = 7
+                
+            # TolX: stop if x-changes smaller than 1e-11 times initial sigma
+            if not converge and np.all( sigma * np.max(np.append(np.abs(pc), np.sqrt(diagC))) < 1e-11 * insigma ):
+                converge = True
+                self._flag = 8
+        
+        arindex = np.argsort(arfitness)
+        xopt = self._unstandardize(arx[arindex[0]])
+        gfit = arfitness[arindex[0]]
+        self._xopt = np.array(xopt)
+        self._gfit = gfit
+        self._n_iter = it
+        if self._snap:
+            self._models = self._models[:,:,:it]
+            self._energy = self._energy[:,:it]
+            self._means = self._means[:it,:]
+        return xopt, gfit
+    
+    @staticmethod
+    def _pvec_and_qvec(vn, norm_v2, y, weights = 0):
+        y_vn = np.dot(y, vn)
+        if isinstance(weights, int) and weights == 0:
+            pvec = y**2 - norm_v2 / ( 1. + norm_v2 ) * ( y_vn * ( y * vn ) ) - 1.
+            qvec = y_vn * y - ( 0.5 * ( y_vn**2 + 1. + norm_v2 ) ) * vn
+        else:
+            pvec = np.dot(weights, y**2 - norm_v2 / ( 1. + norm_v2 ) * ( y_vn * ( y * vn ).T ).T - 1. )
+            qvec = np.dot(weights, ( y_vn * y.T ).T - np.outer(0.5 * ( y_vn**2 + 1.0 + norm_v2 ), vn) )
+        return pvec, qvec
+    
+    @staticmethod
+    def _ngv_ngd(dvec, vn, vnn, norm_v, norm_v2, alpha, avec, bsca, invavnn, pvec, qvec):
+        rvec = pvec - alpha / ( 1. + norm_v2 ) * ( ( 2. + norm_v2 ) * ( qvec * vn ) - norm_v2 * np.dot(vn, qvec) * vnn )
+        svec = rvec / avec - bsca * np.dot(rvec, invavnn) / ( 1. + bsca * np.dot(vnn, invavnn) ) * invavnn
+        ngv = qvec / norm_v - alpha / norm_v * ( ( 2. + norm_v2 ) * ( vn * svec ) - np.dot(svec, vnn) * vn )
+        ngd = dvec * svec
+        return ngv, ngd
+    
+    def _check_inputs(self, *args):
+        if self._solver == "de":
+            F, CR, strategy, xstart = args
+            if self._popsize <= 3 and strategy not in [ "rand2", "best2" ]:
+                self._popsize = 4
+                warn("\npopsize cannot be lower than 4 for DE, popsize set to 4", UserWarning)
+            elif self._popsize <= 4 and strategy == "best2":
+                self._popsize = 5
+                warn("\npopsize cannot be lower than 5 for DE, popsize set to 5", UserWarning)
+            elif self._popsize <= 5 and strategy == "rand2":
+                self._popsize = 6
+                warn("\npopsize cannot be lower than 6 for DE, popsize set to 6", UserWarning)
+            if not isinstance(F, float) and not isinstance(F, int) or not 0. <= F <= 2.:
+                raise ValueError("F must be an integer or float in [ 0, 2 ], got %s" % F)
+            if not isinstance(CR, float) and not isinstance(CR, int) or not 0. <= CR <= 1.:
+                raise ValueError("CR must be an integer or float in [ 0, 1 ], got %s" % CR)
+            if strategy not in [ "rand1", "rand2", "best1", "best2" ]:
+                raise ValueError("strategy should either be 'rand1', 'rand2', 'best1' or 'best2'")
+            if xstart is not None and isinstance(xstart, np.ndarray) \
+                and xstart.shape != (self._popsize, self._n_dim):
+                raise ValueError("xstart must be a ndarray of shape (popsize, n_dim)")
+        elif self._solver in [ "pso", "cpso" ]:
+            w, c1, c2, gamma, xstart = args
+            if not isinstance(w, float) and not isinstance(w, int) or not 0. <= w <= 1.:
+                raise ValueError("w must be an integer or float in [ 0, 1 ], got %s" % w)
+            if not isinstance(c1, float) and not isinstance(c1, int) or not 0. <= c1 <= 4.:
+                raise ValueError("c1 must be an integer or float in [ 0, 4 ], got %s" % c1)
+            if not isinstance(c2, float) and not isinstance(c2, int) or not 0. <= c2 <= 4.:
+                raise ValueError("c2 must be an integer or float in [ 0, 4 ], got %s" % c2)
+            if not isinstance(gamma, float) and not isinstance(gamma, int) or not 0. <= gamma <= 2.:
+                raise ValueError("gamma must be an integer or float in [ 0, 2 ], got %s" % gamma)
+            if xstart is not None and isinstance(xstart, np.ndarray) \
+                and xstart.shape != (self._popsize, self._n_dim):
+                raise ValueError("xstart must be a ndarray of shape (popsize, n_dim)")
+        elif self._solver in [ "cmaes", "vdcma" ]:
+            sigma, mu_perc, xstart = args
+            if self._popsize <= 3:
+                self._popsize = 4
+                warn("\npopsize cannot be lower than 4 for %s, popsize set to 4" % self._solver.upper(), UserWarning)
+            if not isinstance(sigma, float) and not isinstance(sigma, int) or sigma <= 0.:
+                raise ValueError("sigma must be positive, got %s" % sigma)
+            if not isinstance(mu_perc, float) and not isinstance(mu_perc, int) or not 0. < mu_perc <= 1.:
+                raise ValueError("mu_perc must be an integer or float in ] 0, 1 ], got %s" % mu_perc)
+            if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.ndarray)) \
+                and len(xstart) != self._n_dim:
+                raise ValueError("xstart must be a list or ndarray of length n_dim")
     
     @property
     def xopt(self):
@@ -1160,7 +1425,7 @@ class Evolutionary:
     def means(self):
         """
         ndarray of shape (max_iter, n_dim)
-        Mean models at every iterations. Available only when solver = 'cmaes'
-        and snap = True.
+        Mean models at every iterations. Available only when
+        solver = {'cmaes', 'vdcma'} and snap = True.
         """
         return self._means

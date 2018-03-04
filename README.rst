@@ -7,7 +7,7 @@ StochOPy
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.6.1
+:Version: 1.7.0
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -33,6 +33,7 @@ or optimization of an objective function:
 * Particle Swarm Optimization [4]_ [5]_
 * Competitive Particle Swarm Optimization [6]_
 * Covariance Matrix Adaptation - Evolution Strategy [7]_
+* VD-CMA [8]_
 
 
 Installation
@@ -131,6 +132,7 @@ Related works
 
 * `StochOPy WebApp <https://github.com/keurfonluu/stochopy-webapp>`__: StochOPy WebApp allows the users to see how popular stochastic algorithms perform on different benchmark functions.
 * `StochANNPy <https://github.com/keurfonluu/stochannpy>`__: StochANNPy (STOCHAstic Artificial Neural Network for PYthon) provides user-friendly routines compatible with Scikit-Learn for stochastic learning.
+* `StochOptim <https://github.com/keurfonluu/stochoptim>`__: StochOptim provides user friendly functions written in modern Fortran to solve optimization problems using stochastic algorithms in a parallel environment (MPI).
 
 
 References
@@ -146,9 +148,11 @@ References
        of ICNN'95 - International Conference on Neural Networks, 1995, 4: 1942-1948
 .. [5] F. Van Den Bergh, *An analysis of particle swarm optimizers*, University
        of Pretoria, 2001
-.. [6] K. Luu, M. Noble and A. Gesret, *A competitive particle swarm
-       optimization for nonlinear first arrival traveltime tomography*, In SEG
-       Technical Program Expanded Abstracts 2016 (pp. 2740-2744). Society of
-       Exploration Geophysicists.
+.. [6] K. Luu, M. Noble and A. Gesret, *A parallel competitive Particle Swarm
+       Optimization for non-linear first arrival traveltime tomography and
+       uncertainty quantification*, Computers & Geosciences, 2018, 113: 81-93
 .. [7] N. Hansen, *The CMA evolution strategy: A tutorial*, Inria, Université
        Paris-Saclay, LRI, 2011, 102: 1-34
+.. [8] Y. Akimoto, A. Auger and N. Hansen, *Comparison-Based Natural Gradient
+       Optimization in High Dimension*, Proceedings of the 2014 conference on
+       Genetic and evolutionary computation, 2014, 373-380

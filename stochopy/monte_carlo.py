@@ -8,6 +8,7 @@ Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
 
 __all__ = [ "MonteCarlo" ]

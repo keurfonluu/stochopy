@@ -8,6 +8,8 @@ Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from matplotlib.figure import Figure
 from matplotlib import animation
 
@@ -59,10 +61,10 @@ class StochOGUI():
     MAX_SEED = 999999
     FUNCOPT = ( "Ackley", "Quartic", "Quartic noise", "Rastrigin", "Rosenbrock",
                 "Sphere", "Styblinski-Tang" )
-    EAOPT = ( "CPSO", "PSO", "DE", "CMAES", )
+    EAOPT = ( "CPSO", "PSO", "DE", "CMAES", "VDCMA" )
     MCOPT = ( "Hastings", "Hamiltonian", )
     STRATOPT = ( "rand1", "rand2", "best1", "best2" )
-    MIN_POPSIZE = { "cpso": 2, "pso": 2, "de": 4, "cmaes": 4 }
+    MIN_POPSIZE = { "cpso": 2, "pso": 2, "de": 4, "cmaes": 4, "vdcma": 4 }
     
     def __init__(self, master):
         self.master = master
@@ -86,7 +88,7 @@ class StochOGUI():
         self.select_widget(self.solver_name.get())
         
     def about(self):
-        about = "StochOPy Viewer 1.2" + "\n" \
+        about = "StochOPy Viewer 1.3" + "\n" \
                 + "Created by Keurfon Luu"
         tkmessage.showinfo("About", about)
         
@@ -220,6 +222,8 @@ class StochOGUI():
         elif solver == "DE":
             self.de_widget()
         elif solver == "CMAES":
+            self.cmaes_widget()
+        elif solver == "VDCMA":
             self.cmaes_widget()
         elif solver == "Hastings":
             self.hastings_widget()
@@ -437,7 +441,7 @@ class StochOGUI():
                 self.solver.sample(sampler = solver_name,
                                    stepsize = stepsize,
                                    n_leap = self.n_leap.get())
-            elif solver_name in [ "cpso", "pso", "de", "cmaes" ]:
+            elif solver_name in [ "cpso", "pso", "de", "cmaes", "vdcma" ]:
                 self.solver = Evolutionary(popsize = self.popsize.get(),
                                            max_iter = self.max_iter.get(),
                                            constrain = bool(self.constrain.get()),
@@ -473,7 +477,7 @@ class StochOGUI():
             frames = models.shape[0]
             linestyle = "--"
             ylabel = "Fitness"
-        elif self.solver._solver in [ "cpso", "pso", "de", "cmaes" ]:
+        elif self.solver._solver in [ "cpso", "pso", "de", "cmaes", "vdcma" ]:
             func = self._update_evolutionary
             gfit = self._gfit(self.solver.energy)
             frames = models.shape[-1]

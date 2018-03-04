@@ -120,7 +120,20 @@ class EvolutionaryTest(unittest.TestCase):
         xstart = np.array([ -3., -3. ])
         xopt, gfit = self.optimizer.optimize(solver = "cmaes", sigma = sigma,
                                              mu_perc = mu_perc, xstart = xstart)
-        xopt_true = np.array([ -0.44198412, 0.24806027 ])
+        xopt_true = np.array([ 0.80575841, 0.649243 ])
+        for i, val in enumerate(xopt):
+            self.assertAlmostEqual(val, xopt_true[i])
+            
+    def test_vdcma(self):
+        """
+        VD-CMA test.
+        """
+        sigma = 0.1
+        mu_perc = 0.2
+        xstart = np.array([ -3., -3. ])
+        xopt, gfit = self.optimizer.optimize(solver = "vdcma", sigma = sigma,
+                                             mu_perc = mu_perc, xstart = xstart)
+        xopt_true = np.array([ 0.82225685, 0.6635162 ])
         for i, val in enumerate(xopt):
             self.assertAlmostEqual(val, xopt_true[i])
   
