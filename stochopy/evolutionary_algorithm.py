@@ -1478,7 +1478,7 @@ class Evolutionary:
     @property
     def models(self):
         """
-        ndarray of shape (popsize, n_dim, max_iter)
+        ndarray of shape (popsize, n_dim, n_iter)
         Models explored by every individuals at each iteration. Available only
         when snap = True.
         """
@@ -1487,7 +1487,7 @@ class Evolutionary:
     @property
     def energy(self):
         """
-        ndarray of shape (popsize, max_iter)
+        ndarray of shape (popsize, n_iter)
         Energy of models explored by every individuals at each iteration.
         Available only when snap = True.
         """
@@ -1496,8 +1496,24 @@ class Evolutionary:
     @property
     def means(self):
         """
-        ndarray of shape (max_iter, n_dim)
+        ndarray of shape (n_iter, n_dim)
         Mean models at every iterations. Available only when
         solver = {'cmaes', 'vdcma'} and snap = True.
         """
         return self._means
+    
+    @property
+    def time_serial(self):
+        """
+        ndarray of length n_iter
+        Sequential computation time in seconds at each iteration.
+        """
+        return self._time_serial
+    
+    @property
+    def time_parallel(self):
+        """
+        ndarray of length n_iter
+        Parallel computation time in seconds at each iteration.
+        """
+        return self._time_parallel
