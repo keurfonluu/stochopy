@@ -4,8 +4,8 @@
 This example shows how to optimize a benchmark function in parallel using MPI.
 In a terminal, type: mpiexec -n 4 python example_mpi.py
 Computation can be a little bit faster or slower compared with 1 process due to
-communication cost. Usage of MPI is relevant only if the computation time of
-the fitness function is high (speed-up almost ideal).
+communication overhead. Usage of MPI is relevant only if the computation time
+of the fitness function is high.
 
 Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
 License: MIT

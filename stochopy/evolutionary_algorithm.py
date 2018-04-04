@@ -136,11 +136,17 @@ class Evolutionary:
                         for attr in self._ATTRIBUTES ]
         if self._solver == "cpso":
             attributes.append("%s: %s" % ("n_restart".rjust(13), self._print_attr("n_restart")))
+        if self._mpi:
+            attributes.append("%s: %s seconds" % ("t_serial".rjust(13), self._print_attr("t_serial")))
+            attributes.append("%s: %s seconds" % ("t_parallel".rjust(13), self._print_attr("t_parallel")))
         return "\n".join(attributes) + "\n"
     
     def _print_attr(self, attr):
-        if attr not in self._ATTRIBUTES + [ "n_restart" ]:
-            raise ValueError("attr should be either 'solution', 'fitness', 'n_iter', 'n_eval', 'n_restart' or 'flag'")
+        ATTRIBUTES = self._ATTRIBUTES + [ "n_restart" ]
+        if self._mpi:
+            ATTRIBUTES += [ "t_serial", "t_parallel" ]
+        if attr not in ATTRIBUTES:
+            raise ValueError("attr should be in %s" % ATTRIBUTES)
         else:
             if attr == "solution":
                 param = "\n"
@@ -160,6 +166,10 @@ class Evolutionary:
                 return "%d" % self._n_restart
             elif attr == "flag":
                 return "%s" % self.flag
+            elif attr == "t_serial":
+                return "%.8g" % (np.sum(self._time_serial))
+            elif attr == "t_parallel":
+                return "%.8g" % (np.sum(self._time_parallel))
     
     def optimize(self, solver = "cpso", xstart = None, sync = True,
                  w = 0.7298, c1 = 1.49618, c2 = 1.49618, gamma = 1.,
@@ -260,6 +270,7 @@ class Evolutionary:
         
         # Initialize
         self._solver = solver
+        self._n_eval = 0
         self._n_restart = 0
         self._init_models()
         self._mu_scale = 0.5 * (self._upper + self._lower)
@@ -268,6 +279,8 @@ class Evolutionary:
             self._mpi_comm = MPI.COMM_WORLD
             self._mpi_rank = self._mpi_comm.Get_rank()
             self._mpi_size = self._mpi_comm.Get_size()
+            self._time_serial = np.zeros(self._max_iter)
+            self._time_parallel = np.zeros(self._max_iter)
         else:
             self._mpi_rank = 0
             self._mpi_size = 1
@@ -301,9 +314,10 @@ class Evolutionary:
         self._energy = np.zeros((self._popsize, self._max_iter))
         return
     
-    def _eval_models(self, models):
+    def _eval_models(self, models, it):
         n = models.shape[0]
         if self._mpi:
+            starttime_parallel = MPI.Wtime()
             fit = np.zeros(n)
             fit_mpi = np.zeros_like(fit)
             self._mpi_comm.Barrier()
@@ -313,8 +327,10 @@ class Evolutionary:
             self._mpi_comm.Barrier()
             self._mpi_comm.Allreduce([ fit_mpi, MPI.DOUBLE ], [ fit, MPI.DOUBLE ],
                                      op = MPI.SUM)
+            self._time_parallel[it-1] = MPI.Wtime() - starttime_parallel
         else:
             fit = np.array([ self._func(self._unstandardize(models[i])) for i in range(n) ])
+        self._n_eval += n
         return fit
     
     def _constrain_de(self, models):
@@ -357,7 +373,7 @@ class Evolutionary:
         # Clip to boundaries
         arxvalid = np.where(arxvalid < -1., -np.ones_like(arxvalid), arxvalid)
         arxvalid = np.where(arxvalid > 1., np.ones_like(arxvalid), arxvalid)
-        arfitness = self._eval_models(arxvalid)
+        arfitness = self._eval_models(arxvalid, it)
         
         # Get delta fitness values
         perc = np.percentile(arfitness, [ 25, 75 ])
@@ -400,9 +416,8 @@ class Evolutionary:
         bnd_scale = np.exp( 0.9 * ( np.log(diagC) - np.mean(np.log(diagC)) ) )
         
         # Assigned penalized fitness
-        arfitness = self._eval_models(arxvalid) \
-                    + np.dot((arxvalid - arx)**2, bnd_weights / bnd_scale)
-        return arfitness, bnd_weights, dfithist, validfitval, iniphase
+        arfitness += np.dot((arxvalid - arx)**2, bnd_weights / bnd_scale)
+        return arfitness, arxvalid, bnd_weights, dfithist, validfitval, iniphase
     
     def _de_mutation(self, X, F, gbest, strategy, sync, i = None):
         if sync:
@@ -479,6 +494,10 @@ class Evolutionary:
         # Check inputs
         self._check_inputs(F, CR, strategy, xstart)
         
+        # Start timer
+        if self._mpi:
+            starttime_serial = MPI.Wtime()
+        
         # Population initial positions
         if xstart is None:
             X = np.random.uniform(-1., 1., (self._popsize, self._n_dim))
@@ -486,7 +505,7 @@ class Evolutionary:
             X = self._standardize(xstart)
         
         # Compute fitness
-        pfit = self._eval_models(X)
+        pfit = self._eval_models(X, 1)
         pbestfit = np.array(pfit)
         self._n_eval = self._popsize
         if self._snap:
@@ -499,10 +518,16 @@ class Evolutionary:
         gfit = pbestfit[gbidx]
         gbest = np.array(X[gbidx,:])
         
+        if self._mpi:
+            self._time_serial[0] = MPI.Wtime() - starttime_serial
+        
         # Iterate until one of the termination criterion is satisfied
         it = 1
         converge = False
         while not converge:
+            if self._mpi:
+                starttime_serial = MPI.Wtime()
+            
             it += 1
             r1 = np.random.rand(self._popsize, self._n_dim)
             
@@ -522,8 +547,7 @@ class Evolutionary:
                     U = self._constrain_de(U)
                 
                 # Selection
-                pfit = self._eval_models(U)
-                self._n_eval += self._popsize
+                pfit = self._eval_models(U, it)
                 idx = pfit < pbestfit
                 pbestfit[idx] = pfit[idx]
                 X[idx] = U[idx]
@@ -576,12 +600,12 @@ class Evolutionary:
                     # Selection
                     pfit[i] = self._func(self._unstandardize(U))
                     self._n_eval += 1
-                    if pfit[i] < pbestfit[i]:
+                    if pfit[i] <= pbestfit[i]:
                         X[i] = np.array(U)
                         pbestfit[i] = pfit[i]
                         
                         # Update best individual
-                        if pfit[i] < gfit:
+                        if pfit[i] <= gfit:
                             # Stop if best individual position changes less than eps1
                             if np.linalg.norm(gbest - X[i]) <= self._eps1 \
                                 and pfit[i] <= self._eps2:
@@ -612,10 +636,16 @@ class Evolutionary:
             if self._snap:
                 self._models[:,:,it-1] = self._unstandardize(X)
                 self._energy[:,it-1] = np.array(pbestfit)
+                
+            if self._mpi:
+                self._time_serial[it-1] = MPI.Wtime() - starttime_serial
                     
         self._xopt = xopt
         self._gfit = gfit
         self._n_iter = it
+        if self._mpi:
+            self._time_serial = self._time_serial[:it] - self._time_parallel[:it]
+            self._time_parallel = self._time_parallel[:it]
         if self._snap:
             self._models = self._models[:,:,:it]
             self._energy = self._energy[:,:it]
@@ -657,13 +687,17 @@ class Evolutionary:
                Networks, 1995, 4: 1942-1948
         .. [2] F. Van Den Bergh, *An analysis of particle swarm optimizers*,
                University of Pretoria, 2001
-        .. [3] K. Luu, M. Noble and A. Gesret, *A parallel competitive Particle
-               Swarm Optimization for non-linear first arrival traveltime
-               tomography and uncertainty quantification*,
-               Computers & Geosciences, 2018, 113: 81-93
+        .. [3] K. Luu, M. Noble, A. Gesret, N. Belayouni and P.-F. Roux,
+               *A parallel competitive Particle Swarm Optimization for
+               non-linear first arrival traveltime tomography and uncertainty
+               quantification*, Computers & Geosciences, 2018, 113: 81-93
         """
         # Check inputs
         self._check_inputs(w, c1, c2, gamma, xstart)
+        
+        # Start timer
+        if self._mpi:
+            starttime_serial = MPI.Wtime()
         
         # Particles initial positions
         if xstart is None:
@@ -676,7 +710,7 @@ class Evolutionary:
         V = np.zeros((self._popsize, self._n_dim))
         
         # Compute fitness
-        pfit = self._eval_models(X)
+        pfit = self._eval_models(X, 1)
         pbestfit = np.array(pfit)
         self._n_eval = self._popsize
         if self._snap:
@@ -692,10 +726,16 @@ class Evolutionary:
         # Swarm maximum radius
         delta = np.log(1. + 0.003 * self._popsize) / np.max((0.2, np.log(0.01*self._max_iter)))
         
+        if self._mpi:
+            self._time_serial[0] = MPI.Wtime() - starttime_serial
+        
         # Iterate until one of the termination criterion is satisfied
         it = 1
         converge = False
         while not converge:
+            if self._mpi:
+                starttime_serial = MPI.Wtime()
+            
             it += 1
             r1 = np.random.rand(self._popsize, self._n_dim)
             r2 = np.random.rand(self._popsize, self._n_dim)
@@ -711,8 +751,7 @@ class Evolutionary:
                     X += V
                 
                 # Selection
-                pfit = self._eval_models(X)
-                self._n_eval += self._popsize
+                pfit = self._eval_models(X, it)
                 idx = pfit < pbestfit
                 pbestfit[idx] = np.array(pfit[idx])
                 pbest[idx] = np.array(X[idx])
@@ -760,12 +799,12 @@ class Evolutionary:
                     # Selection
                     pfit[i] = self._func(self._unstandardize(X[i]))
                     self._n_eval += 1
-                    if pfit[i] < pbestfit[i]:
+                    if pfit[i] <= pbestfit[i]:
                         pbest[i] = np.array(X[i])
                         pbestfit[i] = pfit[i]
                         
                         # Update best individual
-                        if pfit[i] < gfit:
+                        if pfit[i] <= gfit:
                             # Stop if best individual position changes less than eps1
                             if np.linalg.norm(gbest - X[i]) <= self._eps1 \
                                 and pfit[i] <= self._eps2:
@@ -816,10 +855,16 @@ class Evolutionary:
                         X[idx] = np.random.uniform(-1., 1., (nw, self._n_dim))
                         pbest[idx] = np.array(X[idx])
                         pbestfit[idx] = np.full(nw, 1e30)
+                        
+            if self._mpi:
+                self._time_serial[it-1] = MPI.Wtime() - starttime_serial
                 
         self._xopt = np.array(xopt)
         self._gfit = gfit
         self._n_iter = it
+        if self._mpi:
+            self._time_serial = self._time_serial[:it] - self._time_parallel[:it]
+            self._time_parallel = self._time_parallel[:it]
         if self._snap:
             self._models = self._models[:,:,:it]
             self._energy = self._energy[:,:it]
@@ -863,7 +908,11 @@ class Evolutionary:
         if xstart is None:
             xmean = np.random.uniform(-1., 1., self._n_dim)
         else:
-            xmean = self._standardize(xstart)
+            if np.asarray(xstart).ndim == 1:
+                xmean = self._standardize(xstart)
+            else:
+                arfitness = self._eval_models(self._standardize(xstart), 1)
+                xmean = self._standardize(xstart[np.argmin(arfitness)])
         xold = np.empty_like(xmean)
         
         # Number of parents
@@ -906,6 +955,9 @@ class Evolutionary:
         converge = False
         
         while not converge:
+            if self._mpi:
+                starttime_serial = MPI.Wtime()
+            
             it += 1
             
             # Generate lambda offsprings
@@ -915,15 +967,13 @@ class Evolutionary:
                 
             # Evaluate fitness
             if self._constrain:
-                diagC = np.diag(C)
-                arfitness, bnd_weights, dfithist, validfitval, iniphase = self._constrain_cma(
-                        arxvalid, arx, xmean, xold, sigma, diagC, mueff, it,
+                arfitness, arxvalid, bnd_weights, dfithist, validfitval, iniphase = self._constrain_cma(
+                        arxvalid, arx, xmean, xold, sigma, np.diag(C), mueff, it,
                         bnd_weights, dfithist, validfitval, iniphase)
             else:
-                arfitness = self._eval_models(arxvalid)
-            self._n_eval += self._popsize
+                arfitness = self._eval_models(arxvalid, it)
             if self._snap:
-                self._models[:,:,it-1] = self._unstandardize(arx)
+                self._models[:,:,it-1] = self._unstandardize(arxvalid)
                 self._energy[:,it-1] = np.array(arfitness)
                 self._means[it-1,:] = self._unstandardize(xmean)
             
@@ -950,11 +1000,11 @@ class Evolutionary:
             artmp = ( arx[arindex[:mu],:] - np.tile(xold, (mu, 1)) ) / sigma
             if hsig:
                 C = ( 1. - c1 - cmu ) * C \
-                    + c1 * np.dot(pc[:,None], pc[None,:]) \
+                    + c1 * np.outer(pc, pc) \
                     + cmu * np.dot(np.dot(artmp.transpose(), np.diag(weights)), artmp)
             else:
                 C = ( 1. - c1 - cmu ) * C \
-                    + c1 * ( np.dot(pc[:,None], pc[None,:]) + cc * ( 2. - cc ) * C ) \
+                    + c1 * ( np.outer(pc, pc) + cc * ( 2. - cc ) * C ) \
                     + cmu * np.dot(np.dot(artmp.transpose(), np.diag(weights)), artmp)
                 
             # Adapt step size sigma
@@ -1024,11 +1074,17 @@ class Evolutionary:
                 converge = True
                 self._flag = 8
                 
-        xopt = self._unstandardize(arx[arindex[0]])
+            if self._mpi:
+                self._time_serial[it-1] = MPI.Wtime() - starttime_serial
+                
+        xopt = self._unstandardize(arxvalid[arindex[0]])
         gfit = arfitness[arindex[0]]
         self._xopt = np.array(xopt)
         self._gfit = gfit
         self._n_iter = it
+        if self._mpi:
+            self._time_serial = self._time_serial[:it] - self._time_parallel[:it]
+            self._time_parallel = self._time_parallel[:it]
         if self._snap:
             self._models = self._models[:,:,:it]
             self._energy = self._energy[:,:it]
@@ -1074,8 +1130,12 @@ class Evolutionary:
         if xstart is None:
             xmean = np.random.uniform(-1., 1., self._n_dim)
         else:
-            xmean = self._standardize(xstart)
-        xold = np.array(xmean)
+            if np.asarray(xstart).ndim == 1:
+                xmean = self._standardize(xstart)
+            else:
+                arfitness = self._eval_models(self._standardize(xstart), 1)
+                xmean = self._standardize(xstart[np.argmin(arfitness)])
+        xold = np.empty_like(xmean)
         
         # Number of parents
         mu = int(mu_perc * self._popsize)
@@ -1120,6 +1180,9 @@ class Evolutionary:
         converge = False
         
         while not converge:
+            if self._mpi:
+                starttime_serial = MPI.Wtime()
+                
             it += 1
             
             # Generate lambda offsprings
@@ -1128,23 +1191,22 @@ class Evolutionary:
             if flg_injection:
                 ddx = dx / dvec
                 mnorm = (ddx**2).sum() - np.dot(ddx, vvec)**2 / ( 1. + norm_v2 )
-                dy = ( np.linalg.norm(np.random.randn(self._n_dim)) / np.sqrt(mnorm) ) * dx
+                dy = np.linalg.norm(np.random.randn(self._n_dim)) / np.sqrt(mnorm) * dx
                 ary[0] = dy
                 ary[1] = -dy
             arx = xmean + sigma * ary
             arxvalid = np.array(arx)
+            diagC = np.diag(np.dot(np.dot(np.diag(dvec), np.eye(self._n_dim) + np.outer(vvec, vvec)), np.diag(dvec)))
                 
             # Evaluate fitness
             if self._constrain:
-                diagC = np.diag(np.cov(arx.T)) / sigma**2
-                arfitness, bnd_weights, dfithist, validfitval, iniphase = self._constrain_cma(
+                arfitness, arxvalid, bnd_weights, dfithist, validfitval, iniphase = self._constrain_cma(
                         arxvalid, arx, xmean, xold, sigma, diagC, mueff, it,
                         bnd_weights, dfithist, validfitval, iniphase)
             else:
-                arfitness = self._eval_models(arxvalid)
-            self._n_eval += self._popsize
+                arfitness = self._eval_models(arxvalid, it)
             if self._snap:
-                self._models[:,:,it-1] = self._unstandardize(arx)
+                self._models[:,:,it-1] = self._unstandardize(arxvalid)
                 self._energy[:,it-1] = np.array(arfitness)
                 self._means[it-1,:] = self._unstandardize(xmean)
             
@@ -1172,7 +1234,7 @@ class Evolutionary:
             pc = ( 1. - cc ) * pc + hsig * np.sqrt( cc * ( 2. - cc ) * mueff ) * np.dot(weights, ary[arindex[:mu]])
     
             # Alpha and related variables
-            gamma = 1. / np.sqrt(1. + norm_v2)
+            gamma = 1. / np.sqrt( 1. + norm_v2 )
             alpha = np.sqrt( norm_v2**2 + ( 1. + norm_v2 ) / max(vnn) * ( 2. - gamma ) ) / ( 2. + norm_v2 )
             if alpha < 1.:
                 beta = ( 4. - ( 2. - gamma ) / max(vnn) ) / ( 1. + 2. / norm_v2 )**2
@@ -1184,14 +1246,14 @@ class Evolutionary:
             invavnn = vnn / avec
             
             # Rank-mu
-            if cmu == 0:
+            if cmu == 0.:
                 pvec_mu = np.zeros(self._n_dim)
                 qvec_mu = np.zeros(self._n_dim)
             else:
                 pvec_mu, qvec_mu = self._pvec_and_qvec(vn, norm_v2, ary[arindex[:mu]] / dvec, weights)
                 
             # Rank-one
-            if c1 == 0:
+            if c1 == 0.:
                 pvec_one = np.zeros(self._n_dim)
                 qvec_one = np.zeros(self._n_dim)
             else:
@@ -1201,7 +1263,7 @@ class Evolutionary:
             pvec = cmu * pvec_mu + hsig * c1 * pvec_one
             qvec = cmu * qvec_mu + hsig * c1 * qvec_one
             # Natural gradient
-            if cmu + c1 > 0:
+            if cmu + c1 > 0.:
                 ngv, ngd = self._ngv_ngd(dvec, vn, vnn, norm_v, norm_v2, alpha, avec, bsca, invavnn,
                                          pvec, qvec)
                 # Truncation factor to guarantee at most 70 percent change
@@ -1238,8 +1300,6 @@ class Evolutionary:
                 converge = True
                 self._flag = 1
                 
-            diagC = np.diag(np.cov(arx.T)) / sigma**2
-                
             # NoEffectCoord: stop if too low coordinate axis deviations
             if not converge and np.any( 0.2 * sigma * np.sqrt(diagC) < 1e-10 ):
                 converge = True
@@ -1265,13 +1325,19 @@ class Evolutionary:
             if not converge and np.all( sigma * np.max(np.append(np.abs(pc), np.sqrt(diagC))) < 1e-11 * insigma ):
                 converge = True
                 self._flag = 8
+                
+            if self._mpi:
+                self._time_serial[it-1] = MPI.Wtime() - starttime_serial
         
         arindex = np.argsort(arfitness)
-        xopt = self._unstandardize(arx[arindex[0]])
+        xopt = self._unstandardize(arxvalid[arindex[0]])
         gfit = arfitness[arindex[0]]
         self._xopt = np.array(xopt)
         self._gfit = gfit
         self._n_iter = it
+        if self._mpi:
+            self._time_serial = self._time_serial[:it] - self._time_parallel[:it]
+            self._time_parallel = self._time_parallel[:it]
         if self._snap:
             self._models = self._models[:,:,:it]
             self._energy = self._energy[:,:it]
@@ -1279,9 +1345,9 @@ class Evolutionary:
         return xopt, gfit
     
     @staticmethod
-    def _pvec_and_qvec(vn, norm_v2, y, weights = 0):
+    def _pvec_and_qvec(vn, norm_v2, y, weights = None):
         y_vn = np.dot(y, vn)
-        if isinstance(weights, int) and weights == 0:
+        if weights is None:
             pvec = y**2 - norm_v2 / ( 1. + norm_v2 ) * ( y_vn * ( y * vn ) ) - 1.
             qvec = y_vn * y - ( 0.5 * ( y_vn**2 + 1. + norm_v2 ) ) * vn
         else:
@@ -1317,7 +1383,8 @@ class Evolutionary:
                 raise ValueError("strategy should either be 'rand1', 'rand2', 'best1' or 'best2'")
             if xstart is not None and isinstance(xstart, np.ndarray) \
                 and xstart.shape != (self._popsize, self._n_dim):
-                raise ValueError("xstart must be a ndarray of shape (popsize, n_dim)")
+                raise ValueError("xstart must be a ndarray of shape [ %d, %d ], got [ %d, %d ]" \
+                                 % (self._popsize, self._n_dim, xstart.shape[0], xstart.shape[1]))
         elif self._solver in [ "pso", "cpso" ]:
             w, c1, c2, gamma, xstart = args
             if not isinstance(w, float) and not isinstance(w, int) or not 0. <= w <= 1.:
@@ -1330,7 +1397,8 @@ class Evolutionary:
                 raise ValueError("gamma must be an integer or float in [ 0, 2 ], got %s" % gamma)
             if xstart is not None and isinstance(xstart, np.ndarray) \
                 and xstart.shape != (self._popsize, self._n_dim):
-                raise ValueError("xstart must be a ndarray of shape (popsize, n_dim)")
+                raise ValueError("xstart must be a ndarray of shape [ %d, %d ], got [ %d, %d ]" \
+                                 % (self._popsize, self._n_dim, xstart.shape[0], xstart.shape[1]))
         elif self._solver in [ "cmaes", "vdcma" ]:
             sigma, mu_perc, xstart = args
             if self._popsize <= 3:
@@ -1340,9 +1408,13 @@ class Evolutionary:
                 raise ValueError("sigma must be positive, got %s" % sigma)
             if not isinstance(mu_perc, float) and not isinstance(mu_perc, int) or not 0. < mu_perc <= 1.:
                 raise ValueError("mu_perc must be an integer or float in ] 0, 1 ], got %s" % mu_perc)
-            if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.ndarray)) \
-                and len(xstart) != self._n_dim:
-                raise ValueError("xstart must be a list or ndarray of length n_dim")
+            if xstart is not None and isinstance(xstart, (list, np.ndarray)) and np.asarray(xstart).ndim not in [ 1, 2 ]:
+                raise ValueError("xstart must be a 1-D or 2-D ndarray")
+            if np.asarray(xstart).ndim == 1 and len(xstart) != self._n_dim:
+                raise ValueError("xstart must be a list or ndarray of length %d, got %d" % (self._n_dim, len(xstart)))
+            elif np.asarray(xstart).ndim == 2 and xstart.shape != (self._popsize, self._n_dim):
+                raise ValueError("xstart must be a ndarray of shape [ %d, %d ], got [ %d, %d ]" \
+                                 % (self._popsize, self._n_dim, xstart.shape[0], xstart.shape[1]))
     
     @property
     def xopt(self):

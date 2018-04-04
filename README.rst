@@ -7,7 +7,7 @@ StochOPy
 StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
 to sample or optimize objective functions with the most popular algorithms.
 
-:Version: 1.7.0
+:Version: 1.7.1
 :Author: Keurfon Luu
 :Web site: https://github.com/keurfonluu/stochopy
 :Copyright: This document has been placed in the public domain.
@@ -148,9 +148,10 @@ References
        of ICNN'95 - International Conference on Neural Networks, 1995, 4: 1942-1948
 .. [5] F. Van Den Bergh, *An analysis of particle swarm optimizers*, University
        of Pretoria, 2001
-.. [6] K. Luu, M. Noble and A. Gesret, *A parallel competitive Particle Swarm
-       Optimization for non-linear first arrival traveltime tomography and
-       uncertainty quantification*, Computers & Geosciences, 2018, 113: 81-93
+.. [6] K. Luu, M. Noble, A. Gesret, N. Balayouni and P.-F. Roux, *A parallel
+       competitive Particle Swarm Optimization for non-linear first arrival
+       traveltime tomography and uncertainty quantification*,
+       Computers & Geosciences, 2018, 113: 81-93
 .. [7] N. Hansen, *The CMA evolution strategy: A tutorial*, Inria, Université
        Paris-Saclay, LRI, 2011, 102: 1-34
 .. [8] Y. Akimoto, A. Auger and N. Hansen, *Comparison-Based Natural Gradient
