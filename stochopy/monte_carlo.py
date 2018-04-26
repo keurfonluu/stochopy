@@ -39,6 +39,10 @@ class MonteCarlo:
         Accept sample only within search space.
     random_state : int, optional, default None
         Seed for random number generator.
+    args : list or tuple, optional, default ()
+        Arguments passed to func.
+    kwargs : dict, optional, default {}
+        Keyworded arguments passed to func.
     """
     
     _ATTRIBUTES = [ "solution", "fitness", "acceptance_ratio" ]
@@ -77,7 +81,10 @@ class MonteCarlo:
             self._constrain = constrain
         if random_state is not None and random_state >= 0:
             np.random.seed(random_state)
-        return
+        if not isinstance(args, (list, tuple)):
+            raise ValueError("args must be a list or tuple")
+        if not isinstance(kwargs, dict):
+            raise ValueError("kwargs must be a dictionary")
     
     def __repr__(self):
         attributes = [ "%s: %s" % (attr.rjust(13), self._print_attr(attr))
@@ -142,6 +149,11 @@ class MonteCarlo:
             Save the leap-frog positions in a 3-D array with shape
             (n_dim, n_leap+1, max_iter-1) in an attribute 'leap_frog'. For
             visualization purpose only. Only used when sampler = 'hamiltonian'.
+        args : list or tuple, optional, default ()
+            Arguments passed to fprime. Only used when sampler = 'hamiltonian'.
+        kwargs : dict, optional, default {}
+            Keyworded arguments passed to func. Only used when
+            sampler = 'hamiltonian'.
             
         Returns
         -------
@@ -192,9 +204,9 @@ class MonteCarlo:
         # Check inputs
         if not isinstance(sampler, str) or sampler not in [ "pure", "hastings", "hamiltonian" ]:
             raise ValueError("sampler must either be 'pure', 'hastings' or 'hamiltonian', got %s" % sampler)
-        if xstart is not None and (isinstance(xstart, list) or isinstance(xstart, np.ndarray)) \
-            and len(xstart) != self._n_dim:
-            raise ValueError("xstart must be a list or ndarray of length n_dim")
+        if xstart is not None and (not isinstance(xstart, (list, tuple, np.ndarray)) \
+            or len(xstart) != self._n_dim):
+            raise ValueError("xstart must be a list, tuple or ndarray of length n_dim")
         if sampler == "hamiltonian":
             if not isinstance(stepsize, (float, int)) or stepsize <= 0.:
                 raise ValueError("stepsize must be positive, got %s" % stepsize)
@@ -231,7 +243,6 @@ class MonteCarlo:
     def _init_models(self):
         self._models = np.zeros((self._max_iter, self._n_dim))
         self._energy = np.zeros(self._max_iter)
-        return
         
     def _pure(self):
         """
@@ -314,11 +325,14 @@ class MonteCarlo:
                 jmax = min(self._n_dim, j + n_dim_per_iter - 1)
                 self._models[i,:] = self._models[i-1,:]
                 self._models[i,j:jmax+1] += np.random.randn(jmax-j+1) * stepsize[j:jmax+1]
-                self._energy[i] = self._func(self._unstandardize(self._models[i,:]))
-            
-                log_alpha = min(0., self._energy[i-1] - self._energy[i])
-                if log_alpha < np.log(np.random.rand()) \
-                    or not self._in_search_space(self._models[i,:]):
+                if self._in_search_space(self._models[i,:]):
+                    self._energy[i] = self._func(self._unstandardize(self._models[i,:]))
+                    log_alpha = min(0., self._energy[i-1] - self._energy[i])
+                    if log_alpha < np.log(np.random.rand()):
+                        rejected += 1
+                        self._models[i,:] = self._models[i-1,:]
+                        self._energy[i] = self._energy[i-1]
+                else:
                     rejected += 1
                     self._models[i,:] = self._models[i-1,:]
                     self._energy[i] = self._energy[i-1]
@@ -360,6 +374,10 @@ class MonteCarlo:
             Save the leap-frog positions in a 3-D array with shape
             (n_dim, n_leap+1, max_iter-1) in an attribute 'leap_frog'. For
             visualization purpose only.
+        args : list or tuple, optional, default ()
+            Arguments passed to fprime.
+        kwargs : dict, optional, default {}
+            Keyworded arguments passed to fprime.
             
         Returns
         -------
@@ -385,6 +403,10 @@ class MonteCarlo:
                 grad = lambda x: fprime(x, *args, **kwargs)
         if not isinstance(n_leap, int) or n_leap <= 0:
             raise ValueError("n_leap must be a positive integer, got %s" % n_leap)
+        if not isinstance(args, (list, tuple)):
+            raise ValueError("args must be a list or tuple")
+        if not isinstance(kwargs, dict):
+            raise ValueError("kwargs must be a dictionary")
         
         # Initialize models
         if xstart is None:
@@ -421,7 +443,7 @@ class MonteCarlo:
             K = 0.5 * np.sum(p**2)
             log_alpha = min(0., U0 - U + K0 - K)
             if log_alpha < np.log(np.random.rand()) \
-                or not self._in_search_space(self._models[i,:]):
+                or not self._in_search_space(q):
                 rejected += 1
                 self._models[i,:] = self._models[i-1,:]
                 self._energy[i] = self._energy[i-1]

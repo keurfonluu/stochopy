@@ -57,7 +57,7 @@ class MonteCarloTest(unittest.TestCase):
         stepsize = 0.1409
         self.sampler.sample(sampler = "hastings", stepsize = stepsize)
         mean = np.mean(self.sampler.models, axis = 0)
-        mean_true = np.array([ -1.96808276, 4.26872887 ])
+        mean_true = np.array([ -1.61141558, 2.73788443 ])
         for i, val in enumerate(mean):
             self.assertAlmostEqual(val, mean_true[i])
             

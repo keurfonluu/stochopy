@@ -60,10 +60,10 @@ class Evolutionary:
         Seed for random number generator.
     mpi : bool, default False
         Enable MPI parallelization.
-    args : tuple, default ()
-        Arguments to pass to objective function.
-    kwargs : dict, default {}
-        Keyworded arguments to pass to objective function.
+    args : list or tuple, optional, default ()
+        Arguments passed to func.
+    kwargs : dict, optional, default {}
+        Keyworded arguments passed to func.
     """
     
     _ATTRIBUTES = [ "solution", "fitness", "n_iter", "n_eval", "flag" ]
@@ -129,7 +129,6 @@ class Evolutionary:
             raise ValueError("args must be a list or a tuple")
         if not isinstance(kwargs, dict):
             raise ValueError("kwargs must be a dictionary")
-        return
     
     def __repr__(self):
         attributes = [ "%s: %s" % (attr.rjust(13), self._print_attr(attr))
@@ -312,7 +311,6 @@ class Evolutionary:
     def _init_models(self):
         self._models = np.zeros((self._popsize, self._n_dim, self._max_iter))
         self._energy = np.zeros((self._popsize, self._max_iter))
-        return
     
     def _eval_models(self, models, it):
         n = models.shape[0]
