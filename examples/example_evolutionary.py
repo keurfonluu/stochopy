@@ -19,17 +19,17 @@ except ImportError:
 
 if __name__ == "__main__":
     # Parameters
-    func = "rastrigin"
+    func = "sphere"
     
     # Initialize function
-    bf = BenchmarkFunction(func, n_dim = 30)
+    bf = BenchmarkFunction(func, n_dim = 10)
     
     # Initialize solver
-    ea = Evolutionary(popsize = 30, max_iter = 2000, constrain = False, random_state = -1, **bf.get())
+    ea = Evolutionary(popsize = 10, max_iter = 200, constrain = True, random_state = -1, **bf.get())
     
     # Solve
     starttime = time()
-    ea.optimize(solver = "cpso", sync = True)
+    ea.optimize(solver = "pso", sync = False)
     
     # Print solution
     print(ea)
