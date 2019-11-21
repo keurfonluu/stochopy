@@ -683,8 +683,6 @@ def main():
     """
     Start StochOPy Viewer window.
     """
-    import matplotlib
-    matplotlib.use("TkAgg")
     from sys import platform as _platform
     
     root = tk.Tk()
