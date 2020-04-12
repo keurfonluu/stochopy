@@ -24,6 +24,11 @@ CLASSIFIERS = [
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
+ENTRY_POINTS = {
+    "console_scripts": [
+        "stochopy-viewer = stochopy.gui:main",
+    ],
+}
  
 if __name__ == "__main__":
     setup(
@@ -41,4 +46,5 @@ if __name__ == "__main__":
         include_package_data = True,
         test_suite = "nose.collector",
         tests_require = [ "nose" ],
+        entry_points = ENTRY_POINTS,
     )

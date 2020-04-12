@@ -256,7 +256,7 @@ class MonteCarlo:
             Energy of the MAP model.
         """
         self._models = np.random.uniform(-1., 1., (self._max_iter, self._n_dim))
-        self._energy = np.array([ self._func(self._unstandardize(self._models[i,:])) for i in range(self._max_iter) ])
+        self._energy = np.array([ self._func(self._unstandardize(self._models[i])) for i in range(self._max_iter) ])
         idx = np.argmin(self._energy)
         self._models = self._unstandardize(self._models)
         self._xopt = self._models[idx]
@@ -293,14 +293,14 @@ class MonteCarlo:
         The acceptance ratio is given by the attribute 'acceptance_ratio'.
         """
         # Check inputs
-        if not isinstance(stepsize, (float, int, list, np.ndarray)):
+        if not isinstance(stepsize, (float, int, list, tuple, np.ndarray)):
             raise ValueError("stepsize must be a float, integer, list or ndarray")
         else:
             if isinstance(stepsize, (float, int)) and stepsize <= 0.:
                 raise ValueError("stepsize must be positive, got %s" % stepsize)
-            elif isinstance(stepsize, (list, np.ndarray)) and np.any([ s <= 0 for s in stepsize ]):
+            elif isinstance(stepsize, (list, tuple, np.ndarray)) and np.any([ s <= 0 for s in stepsize ]):
                 raise ValueError("elements in stepsize must be positive")
-            elif isinstance(stepsize, (list, np.ndarray)) and len(stepsize) != self._n_dim:
+            elif isinstance(stepsize, (list, tuple, np.ndarray)) and len(stepsize) != self._n_dim:
                 raise ValueError("stepsize must be a list or ndarray of length n_dim")
         if isinstance(stepsize, (float, int)):
             stepsize = np.full(self._n_dim, stepsize)
@@ -311,10 +311,10 @@ class MonteCarlo:
         
         # Initialize models
         if xstart is None:
-            self._models[0,:] = np.random.uniform(-1., 1., self._n_dim)
+            self._models[0] = np.random.uniform(-1., 1., self._n_dim)
         else:
-            self._models[0,:] = self._standardize(xstart)
-        self._energy[0] = self._func(self._unstandardize(self._models[0,:]))
+            self._models[0] = self._standardize(xstart)
+        self._energy[0] = self._func(self._unstandardize(self._models[0]))
         
         # Metropolis-Hastings algorithm
         rejected = 0
@@ -323,18 +323,18 @@ class MonteCarlo:
             for j in np.arange(0, self._n_dim, n_dim_per_iter):
                 i += 1
                 jmax = min(self._n_dim, j + n_dim_per_iter - 1)
-                self._models[i,:] = self._models[i-1,:]
+                self._models[i] = self._models[i-1]
                 self._models[i,j:jmax+1] += np.random.randn(jmax-j+1) * stepsize[j:jmax+1]
-                if self._in_search_space(self._models[i,:]):
-                    self._energy[i] = self._func(self._unstandardize(self._models[i,:]))
+                if self._in_search_space(self._models[i]):
+                    self._energy[i] = self._func(self._unstandardize(self._models[i]))
                     log_alpha = min(0., self._energy[i-1] - self._energy[i])
                     if log_alpha < np.log(np.random.rand()):
                         rejected += 1
-                        self._models[i,:] = self._models[i-1,:]
+                        self._models[i] = self._models[i-1]
                         self._energy[i] = self._energy[i-1]
                 else:
                     rejected += 1
-                    self._models[i,:] = self._models[i-1,:]
+                    self._models[i] = self._models[i-1]
                     self._energy[i] = self._energy[i-1]
                     
                 if i == self._max_iter-1:
@@ -410,10 +410,10 @@ class MonteCarlo:
         
         # Initialize models
         if xstart is None:
-            self._models[0,:] = np.random.uniform(-1., 1., self._n_dim)
+            self._models[0] = np.random.uniform(-1., 1., self._n_dim)
         else:
-            self._models[0,:] = self._standardize(xstart)
-        self._energy[0] = self._func(self._unstandardize(self._models[0,:]))
+            self._models[0] = self._standardize(xstart)
+        self._energy[0] = self._func(self._unstandardize(self._models[0]))
         
         # Save leap frog trajectory
         if snap_leap:
@@ -422,7 +422,7 @@ class MonteCarlo:
         # Leap-frog algorithm
         rejected = 0
         for i in range(1, self._max_iter):
-            q = np.array(self._models[i-1,:])
+            q = np.array(self._models[i-1])
             p = np.random.randn(self._n_dim)            # Random momentum
             q0, p0 = np.array(q), np.array(p)
             if snap_leap:
@@ -445,10 +445,10 @@ class MonteCarlo:
             if log_alpha < np.log(np.random.rand()) \
                 or not self._in_search_space(q):
                 rejected += 1
-                self._models[i,:] = self._models[i-1,:]
+                self._models[i] = self._models[i-1]
                 self._energy[i] = self._energy[i-1]
             else:
-                self._models[i,:] = q
+                self._models[i] = q
                 self._energy[i] = U
         self._acceptance_ratio = 1. - rejected / self._max_iter
         
