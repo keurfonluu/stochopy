@@ -42,8 +42,8 @@ def minimize(
         "xtol": 1.0e-8,
         "ftol": 1.0e-8,
         "constraints": False,
-        "mpi": False,
         "sync": True,
+        "mpi": False,
     }
     _options.update(options)
 
@@ -53,10 +53,10 @@ def minimize(
     c1 = _options["c1"]
     c2 = _options["c2"]
     gamma = _options["gamma"]
-    sync = _options["sync"]
     xtol = _options["xtol"]
     ftol = _options["ftol"]
     constraints = _options["constraints"]
+    sync = _options["sync"]
     mpi = _options["mpi"]
 
     # Population size
@@ -86,14 +86,11 @@ def minimize(
     # Constraints
     cons = constrain(constraints, lower, upper)
 
-    # MPI
-    fun = parallelize(fun, mpi)
-
     # Synchronize
-    if sync:
-        pso_iter = pso_sync
-    else:
-        raise NotImplementedError()
+    pso_iter = pso_sync if sync else pso_async
+
+    # MPI
+    fun = parallelize(fun, mpi) if sync else fun
 
     # Initialize arrays
     xall = numpy.empty((popsize, ndim, maxiter))
@@ -109,7 +106,7 @@ def minimize(
     pbest = numpy.copy(X)
 
     # Evaluate initial population
-    pfit = fun(X)
+    pfit = fun(X) if sync else numpy.array([fun(xx) for xx in X])
     pbestfit = numpy.array(pfit)
 
     # Initial best solution
@@ -123,7 +120,9 @@ def minimize(
     while not converged:
         it += 1
 
-        X, V, pbest, gbest, pbestfit, gfit, status = pso_iter(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, maxiter, xtol, ftol, fun, cons)
+        r1 = numpy.random.rand(popsize, ndim)
+        r2 = numpy.random.rand(popsize, ndim)
+        X, V, pbest, gbest, pbestfit, gfit, status = pso_iter(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons)
 
         xall[:, :, it - 1] = numpy.copy(X)
         funall[:, it - 1] = numpy.copy(pfit)
@@ -186,11 +185,7 @@ def mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons):
     return X, V
 
 
-def pso_sync(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, maxiter, xtol, ftol, fun, cons):
-    popsize, ndim = X.shape
-    r1 = numpy.random.rand(popsize, ndim)
-    r2 = numpy.random.rand(popsize, ndim)
-
+def pso_sync(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons):
     # Mutation
     X, V = mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons)
 
@@ -228,6 +223,47 @@ def pso_sync(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, maxiter, xtol, f
         gbest = numpy.copy(pbest[gbidx])
         gfit = pbestfit[gbidx]
         status = None
+
+    return X, V, pbest, gbest, pbestfit, gfit, status
+
+
+def pso_async(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons):
+    for i in range(len(X)):
+        # Mutation
+        X[i], V[i] = mutation(X[i], V[i], pbest[i], gbest, w, c1, c2, r1[i], r2[i], cons)
+
+        # Selection
+        pfit = fun(X[i])
+
+        status = None
+        if pfit <= pbestfit[i]:
+            pbest[i] = numpy.copy(X[i])
+            pbestfit[i] = pfit
+            
+            # Update best individual
+            if pfit <= gfit:
+                # Stop if best solution changes less than xtol
+                cond1 = numpy.linalg.norm(gbest - X[i]) <= xtol
+                cond2 = pfit <= ftol
+                if cond1 and cond2:
+                    gbest = numpy.copy(X[i])
+                    gfit = pfit
+                    status = 0
+                    
+                # Stop if best solution value is less than ftol
+                elif pfit <= ftol:
+                    gbest = numpy.copy(X[i])
+                    gfit = pfit
+                    status = 1
+    
+                # Otherwise, update best individual
+                else:
+                    gbest = numpy.copy(X[i])
+                    gfit = pfit
+                    
+    # Stop if maximum iteration is reached
+    if status is None and it >= maxiter:
+        status = -1
 
     return X, V, pbest, gbest, pbestfit, gfit, status
 
