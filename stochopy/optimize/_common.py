@@ -31,7 +31,7 @@ def parallelize(fun, args, sync, parallel):
 
         else:
             def wrapper(x):
-                return numpy.asarray(fun(x, *args))
+                return fun(x, *args)
 
     return wrapper
 
