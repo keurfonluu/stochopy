@@ -1,6 +1,6 @@
 import numpy
 
-from .._common import messages, parallelize
+from .._common import messages, parallelize, selection_sync, selection_async
 from .._helpers import register, OptimizeResult
 
 __all__ = [
@@ -190,39 +190,7 @@ def pso_sync(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, r1, r2, maxiter,
     X, V = mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons)
 
     # Selection
-    pfit = fun(X)
-    idx = pfit < pbestfit
-    pbestfit[idx] = numpy.array(pfit[idx])
-    pbest[idx] = numpy.array(X[idx])
-
-    # Update best individual
-    gbidx = numpy.argmin(pbestfit)
-
-    # Stop if best solution changes less than xtol
-    cond1 = numpy.linalg.norm(gbest - pbest[gbidx]) <= xtol
-    cond2 = pbestfit[gbidx] <= ftol
-    if cond1 and cond2:
-        gbest = numpy.copy(pbest[gbidx])
-        gfit = pbestfit[gbidx]
-        status = 0
-        
-    # Stop if best solution value is less than ftol
-    elif pbestfit[gbidx] <= ftol:
-        gbest = numpy.copy(pbest[gbidx])
-        gfit = pbestfit[gbidx]
-        status = 1
-
-    # Stop if maximum iteration is reached
-    elif it >= maxiter:
-        gbest = numpy.copy(pbest[gbidx])
-        gfit = pbestfit[gbidx]
-        status = -1
-
-    # Otherwise, update best individual
-    else:
-        gbest = numpy.copy(pbest[gbidx])
-        gfit = pbestfit[gbidx]
-        status = None
+    gbest, gfit, status = selection_sync(it, X, gbest, pbest, pbestfit, maxiter, xtol, ftol, fun)
 
     return X, V, pbest, gbest, pbestfit, gfit, status
 
@@ -233,33 +201,7 @@ def pso_async(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, r1, r2, maxiter
         X[i], V[i] = mutation(X[i], V[i], pbest[i], gbest, w, c1, c2, r1[i], r2[i], cons)
 
         # Selection
-        pfit = fun(X[i])
-
-        status = None
-        if pfit <= pbestfit[i]:
-            pbest[i] = numpy.copy(X[i])
-            pbestfit[i] = pfit
-            
-            # Update best individual
-            if pfit <= gfit:
-                # Stop if best solution changes less than xtol
-                cond1 = numpy.linalg.norm(gbest - X[i]) <= xtol
-                cond2 = pfit <= ftol
-                if cond1 and cond2:
-                    gbest = numpy.copy(X[i])
-                    gfit = pfit
-                    status = 0
-                    
-                # Stop if best solution value is less than ftol
-                elif pfit <= ftol:
-                    gbest = numpy.copy(X[i])
-                    gfit = pfit
-                    status = 1
-    
-                # Otherwise, update best individual
-                else:
-                    gbest = numpy.copy(X[i])
-                    gfit = pfit
+        gbest, gfit, status = selection_async(it, X, gbest, gfit, pbest, pbestfit, maxiter, xtol, ftol, fun, i)
                     
     # Stop if maximum iteration is reached
     if status is None and it >= maxiter:

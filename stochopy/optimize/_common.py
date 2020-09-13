@@ -34,3 +34,75 @@ def parallelize(fun, args, sync, parallel):
                 return numpy.asarray(fun(x, *args))
 
     return wrapper
+
+
+def selection_sync(it, cand, xbest, x, xfun, maxiter, xtol, ftol, fun):
+    # Selection
+    pfit = fun(cand)
+    idx = pfit < xfun
+    xfun[idx] = pfit[idx].copy()
+    x[idx] = cand[idx].copy()
+
+    # Best solution index
+    idx = numpy.argmin(xfun)
+
+    # Stop if best solution changes less than xtol
+    cond1 = numpy.linalg.norm(xbest - x[idx]) <= xtol
+    cond2 = xfun[idx] <= ftol
+    if cond1 and cond2:
+        xbest = x[idx].copy()
+        xbestfun = xfun[idx]
+        status = 0
+        
+    # Stop if best solution value is less than ftol
+    elif xfun[idx] <= ftol:
+        xbest = x[idx].copy()
+        xbestfun = xfun[idx]
+        status = 1
+
+    # Stop if maximum iteration is reached
+    elif it >= maxiter:
+        xbest = x[idx].copy()
+        xbestfun = xfun[idx]
+        status = -1
+
+    # Otherwise, update best solution
+    else:
+        xbest = x[idx].copy()
+        xbestfun = xfun[idx]
+        status = None
+
+    return xbest, xbestfun, status
+
+
+def selection_async(it, cand, xbest, xbestfun, x, xfun, maxiter, xtol, ftol, fun, i):
+    # Selection
+    candfun = fun(cand[i])
+
+    status = None
+    if candfun <= xfun[i]:
+        x[i] = cand[i].copy()
+        xfun[i] = candfun
+        
+        # Update best individual
+        if candfun <= xbestfun:
+            # Stop if best solution changes less than xtol
+            cond1 = numpy.linalg.norm(xbest - cand[i]) <= xtol
+            cond2 = candfun <= ftol
+            if cond1 and cond2:
+                xbest = cand[i].copy()
+                xbestfun = candfun
+                status = 0
+                
+            # Stop if best solution value is less than ftol
+            elif candfun <= ftol:
+                xbest = cand[i].copy()
+                xbestfun = candfun
+                status = 1
+
+            # Otherwise, update best solution
+            else:
+                xbest = cand[i].copy()
+                xbestfun = candfun
+
+    return xbest, xbestfun, status
