@@ -122,7 +122,7 @@ def minimize(
 
         r1 = numpy.random.rand(popsize, ndim)
         r2 = numpy.random.rand(popsize, ndim)
-        X, V, pbest, gbest, pbestfit, gfit, status = pso_iter(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons)
+        X, V, pbest, gbest, pbestfit, gfit, pfit, status = pso_iter(it, X, V, pbest, gbest, pbestfit, gfit, pfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons)
 
         xall[:, :, it - 1] = numpy.copy(X)
         funall[:, it - 1] = numpy.copy(pfit)
@@ -185,29 +185,29 @@ def mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons):
     return X, V
 
 
-def pso_sync(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons):
+def pso_sync(it, X, V, pbest, gbest, pbestfit, gfit, pfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons):
     # Mutation
     X, V = mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons)
 
     # Selection
-    gbest, gfit, status = selection_sync(it, X, gbest, pbest, pbestfit, maxiter, xtol, ftol, fun)
+    gbest, gfit, pfit, status = selection_sync(it, X, gbest, pbest, pbestfit, maxiter, xtol, ftol, fun)
 
-    return X, V, pbest, gbest, pbestfit, gfit, status
+    return X, V, pbest, gbest, pbestfit, gfit, pfit, status
 
 
-def pso_async(it, X, V, pbest, gbest, pbestfit, gfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons):
+def pso_async(it, X, V, pbest, gbest, pbestfit, gfit, pfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons):
     for i in range(len(X)):
         # Mutation
         X[i], V[i] = mutation(X[i], V[i], pbest[i], gbest, w, c1, c2, r1[i], r2[i], cons)
 
         # Selection
-        gbest, gfit, status = selection_async(it, X, gbest, gfit, pbest, pbestfit, maxiter, xtol, ftol, fun, i)
+        gbest, gfit, pfit[i], status = selection_async(it, X, gbest, gfit, pbest, pbestfit, maxiter, xtol, ftol, fun, i)
                     
     # Stop if maximum iteration is reached
     if status is None and it >= maxiter:
         status = -1
 
-    return X, V, pbest, gbest, pbestfit, gfit, status
+    return X, V, pbest, gbest, pbestfit, gfit, pfit, status
 
 
 def restart(it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxiter):

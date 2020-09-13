@@ -38,9 +38,9 @@ def parallelize(fun, args, sync, parallel):
 
 def selection_sync(it, cand, xbest, x, xfun, maxiter, xtol, ftol, fun):
     # Selection
-    pfit = fun(cand)
-    idx = pfit < xfun
-    xfun[idx] = pfit[idx].copy()
+    candfun = fun(cand)
+    idx = candfun < xfun
+    xfun[idx] = candfun[idx].copy()
     x[idx] = cand[idx].copy()
 
     # Best solution index
@@ -72,7 +72,7 @@ def selection_sync(it, cand, xbest, x, xfun, maxiter, xtol, ftol, fun):
         xbestfun = xfun[idx]
         status = None
 
-    return xbest, xbestfun, status
+    return xbest, xbestfun, candfun, status
 
 
 def selection_async(it, cand, xbest, xbestfun, x, xfun, maxiter, xtol, ftol, fun, i):
@@ -105,4 +105,4 @@ def selection_async(it, cand, xbest, xbestfun, x, xfun, maxiter, xtol, ftol, fun
                 xbest = cand[i].copy()
                 xbestfun = candfun
 
-    return xbest, xbestfun, status
+    return xbest, xbestfun, candfun, status
