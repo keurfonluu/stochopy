@@ -43,7 +43,7 @@ def minimize(
         "ftol": 1.0e-8,
         "constraints": False,
         "sync": True,
-        "mpi": False,
+        "parallel": False,
     }
     _options.update(options)
 
@@ -57,7 +57,7 @@ def minimize(
     ftol = _options["ftol"]
     constraints = _options["constraints"]
     sync = _options["sync"]
-    mpi = _options["mpi"]
+    parallel = _options["parallel"]
 
     # Population size
     if popsize < 2:
@@ -89,8 +89,8 @@ def minimize(
     # Synchronize
     pso_iter = pso_sync if sync else pso_async
 
-    # MPI
-    fun = parallelize(fun, mpi) if sync else fun
+    # Parallel
+    fun = parallelize(fun, args, sync, parallel)
 
     # Initialize arrays
     xall = numpy.empty((popsize, ndim, maxiter))

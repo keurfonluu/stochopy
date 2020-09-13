@@ -16,12 +16,21 @@ messages = {
 }
 
 
-def parallelize(fun, mpi):
-    if mpi:
-        raise NotImplementedError()
+def parallelize(fun, args, sync, parallel):
+    if sync:
+        if parallel:
+            raise NotImplementedError()
+
+        else:
+            def wrapper(x):
+                return numpy.array([fun(xx, *args) for xx in x])
 
     else:
-        def wrapper(x, *args, **kwargs):
-            return numpy.array([fun(xx, *args, **kwargs) for xx in x])
+        if parallel:
+            raise ValueError("cannot run asynchronous mode in parallel")
+
+        else:
+            def wrapper(x):
+                return numpy.asarray(fun(x, *args))
 
     return wrapper
