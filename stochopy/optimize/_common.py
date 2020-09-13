@@ -27,7 +27,7 @@ def parallelize(fun, args, sync, parallel):
 
     else:
         if parallel:
-            raise ValueError("cannot run asynchronous mode in parallel")
+            raise ValueError("cannot perform asynchronous optimization in parallel")
 
         else:
             def wrapper(x):
