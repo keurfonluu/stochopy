@@ -24,5 +24,5 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
         bounds=bounds,
         x0=x0,
         args=args,
-        options=options,
+        **options,
     )

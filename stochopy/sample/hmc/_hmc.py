@@ -13,7 +13,12 @@ def sample(
     bounds,
     x0=None,
     args=(),
-    options={},
+    maxiter=100,
+    nleap=10,
+    stepsize=0.01,
+    jac=None,
+    finite_diff_abs_step=1.0e-4,
+    constrain=False,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -31,24 +36,6 @@ def sample(
     # Initial guess x0
     if x0 is not None and len(x0) != ndim:
         raise ValueError()
-
-    # Options
-    _options = {
-        "maxiter": 100,
-        "nleap": 10,
-        "stepsize": 0.01,
-        "jac": None,
-        "finite_diff_abs_step": 1.0e-4,
-        "constrain": False,
-    }
-    _options.update(options)
-
-    maxiter = _options["maxiter"]
-    nleap = _options["nleap"]
-    stepsize = _options["stepsize"]
-    jac = _options["jac"]
-    finite_diff_abs_step = _options["finite_diff_abs_step"]
-    constrain = _options["constrain"]
 
     # Number of leap-frog steps
     if nleap < 1:

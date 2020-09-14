@@ -14,7 +14,15 @@ def minimize(
     bounds,
     x0=None,
     args=(),
-    options={},
+    maxiter=100,
+    popsize=10,
+    sigma=0.1,
+    muperc=0.5,
+    xmean0=None,
+    xtol=1.0e-8,
+    ftol=1.0e-8,
+    constraints=False,
+    parallel=False,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -37,30 +45,6 @@ def minimize(
     xstd = 0.5 * (upper - lower)
     standardize = lambda x: (x - xm) / xstd
     unstandardize = lambda x: x * xstd + xm
-
-    # Options
-    _options = {
-        "maxiter": 100,
-        "popsize": 10,
-        "sigma": 0.1,
-        "muperc": 0.5,
-        "xmean0": None,
-        "xtol": 1.0e-8,
-        "ftol": 1.0e-8,
-        "constraints": False,
-        "parallel": False,
-    }
-    _options.update(options)
-
-    maxiter = _options["maxiter"]
-    popsize = _options["popsize"]
-    sigma = _options["sigma"]
-    muperc = _options["muperc"]
-    xmean0 = _options["xmean0"]
-    xtol = _options["xtol"]
-    ftol = _options["ftol"]
-    constraints = _options["constraints"]
-    parallel = _options["parallel"]
 
     # CMA-ES parameters
     if sigma <= 0.0:

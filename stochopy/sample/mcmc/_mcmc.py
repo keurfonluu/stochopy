@@ -13,7 +13,10 @@ def sample(
     bounds,
     x0=None,
     args=(),
-    options={},
+    maxiter=100,
+    stepsize=0.1,
+    perc=1.0,
+    constrain=False,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -29,20 +32,6 @@ def sample(
     # Initial guess x0
     if x0 is not None and len(x0) != ndim:
         raise ValueError()
-
-    # Options
-    _options = {
-        "maxiter": 100,
-        "stepsize": 0.1,
-        "perc": 1.0,
-        "constrain": False,
-    }
-    _options.update(options)
-
-    maxiter = _options["maxiter"]
-    stepsize = _options["stepsize"]
-    perc = _options["perc"]
-    constrain = _options["constrain"]
 
     # Step size
     if numpy.ndim(stepsize) == 0:

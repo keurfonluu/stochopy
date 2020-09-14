@@ -14,7 +14,16 @@ def minimize(
     bounds,
     x0=None,
     args=(),
-    options={},
+    maxiter=100,
+    popsize=10,
+    CR=0.1,
+    F=0.5,
+    strategy="rand1",
+    xtol=1.0e-8,
+    ftol=1.0e-8,
+    constraints=False,
+    sync=True,
+    parallel=False,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -31,32 +40,6 @@ def minimize(
     if x0 is not None:
         if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != ndim:
             raise ValueError()
-
-    # Options
-    _options = {
-        "maxiter": 100,
-        "popsize": 10,
-        "CR": 0.1,
-        "F": 0.5,
-        "strategy": "rand1",
-        "xtol": 1.0e-8,
-        "ftol": 1.0e-8,
-        "constraints": False,
-        "sync": True,
-        "parallel": False,
-    }
-    _options.update(options)
-
-    maxiter = _options["maxiter"]
-    popsize = _options["popsize"]
-    F = _options["F"]
-    CR = _options["CR"]
-    strategy = _options["strategy"]
-    xtol = _options["xtol"]
-    ftol = _options["ftol"]
-    constraints = _options["constraints"]
-    sync = _options["sync"]
-    parallel = _options["parallel"]
 
     # Population size
     if popsize < 2:
