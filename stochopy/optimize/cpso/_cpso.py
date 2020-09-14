@@ -84,17 +84,13 @@ def minimize(
         delta = numpy.log(1.0 + 0.003 * popsize) / numpy.max((0.2, numpy.log(0.01 * maxiter)))
 
     # Constraints
-    cons = constrain(constraints, lower, upper)
+    cons = constrain(constraints, lower, upper, sync)
 
     # Synchronize
     pso_iter = pso_sync if sync else pso_async
 
     # Parallel
     fun = parallelize(fun, args, sync, parallel)
-
-    # Initialize arrays
-    xall = numpy.empty((popsize, ndim, maxiter))
-    funall = numpy.empty((popsize, maxiter))
 
     # Initial population
     X = (
@@ -113,6 +109,12 @@ def minimize(
     gbidx = numpy.argmin(pbestfit)
     gfit = pbestfit[gbidx]
     gbest = numpy.copy(X[gbidx])
+
+    # Initialize arrays
+    xall = numpy.empty((popsize, ndim, maxiter))
+    funall = numpy.empty((popsize, maxiter))
+    xall[:, :, 0] = numpy.copy(X)
+    funall[:, 0] = numpy.copy(pfit)
 
     # Iterate until one of the termination criterion is satisfied
     it = 1
@@ -145,42 +147,58 @@ def minimize(
     )
     
 
-def constrain(constraints, lower, upper):
+def constrain(constraints, lower, upper, sync):
+    def shrink(X, V, maskl, masku):
+        condl = maskl.any()
+        condu = masku.any()
+
+        if condl and condu:
+            bl = (lower[maskl] - X[maskl]) / V[maskl]
+            bu = (upper[masku] - X[masku]) / V[masku]
+            return min(bl.min(), bu.min())
+
+        elif condl and not condu:
+            bl = (lower[maskl] - X[maskl]) / V[maskl]
+            return bl.min()
+
+        elif not condl and condu:
+            bu = (upper[masku] - X[masku]) / V[masku]
+            return bu.min()
+
+        else:
+            return 1.0
+
     if constraints:
-        def shrink(X, V):
-            Xold = X
-            X = X + V
+        if sync:
+            def cons(X, V):
+                Xcand = X + V
+                maskl = Xcand < lower
+                masku = Xcand > upper
+                beta = numpy.array([shrink(x, v, ml, mu) for x, v, ml, mu in zip(X, V, maskl, masku)])
+                V *= beta[:, None]
 
-            maskl = X < lower
-            masku = X > upper
-            condl = maskl.any()
-            condu = masku.any()
+                return X + V, V
 
-            if condl and condu:
-                bl = ((Xold[maskl] - lower) / (Xold[maskl] - X[maskl])).min()
-                bu = ((Xold[masku] - upper) / (Xold[masku] - X[masku])).min()
-                beta = min(bl, bu)
+        else:
+            def cons(X, V):
+                Xcand = X + V
+                maskl = Xcand < lower
+                masku = Xcand > upper
+                beta = shrink(X, V, maskl, masku)
+                V *= beta
 
-            elif condl and not condu:
-                beta = ((Xold[maskl] - lower) / (Xold[maskl] - X[maskl])).min()
-
-            elif not condl and condu:
-                beta = ((Xold[masku] - upper) / (Xold[masku] - X[masku])).min()
-
-            else:
-                return X
-
-            return Xold + beta * (X - Xold)
-
-        return shrink
+                return X + V, V
 
     else:
-        return lambda X, V: X + V
+        def cons(X, V):
+            return X + V, V
+    
+    return cons
 
 
 def mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons):
     V = w * V + c1 * r1 * (pbest - X) + c2 * r2 * (gbest - X)
-    X = cons(X, V)
+    X, V = cons(X, V)
 
     return X, V
 
