@@ -98,8 +98,8 @@ def minimize(
         
     # Strategy parameter setting: Selection
     weights = numpy.log(mu + 0.5) - numpy.log(numpy.arange(1, mu + 1))
-    weights /= numpy.sum(weights)
-    mueff = numpy.sum(weights)**2 / numpy.sum(weights**2)
+    weights /= weights.sum()
+    mueff = weights.sum() ** 2 / numpy.square(weights).sum()
     
     # Strategy parameter setting: Adaptation
     cc = (4.0 + mueff / ndim) / (ndim + 4.0 + 2.0 * mueff / ndim)
@@ -187,7 +187,7 @@ def minimize(
             invsqrtC = numpy.dot(numpy.dot(B, numpy.diag(1.0 / D)), B.T)
 
         # Check convergence
-        status = converge(it, ndim, maxiter, xmean, xold, arbestfitness, arfitness, arindex, sigma, insigma, B, D, C, ilim, pc, xtol, ftol)
+        status = converge(it, ndim, maxiter, xmean, xold, arbestfitness, arfitness, arindex, sigma, insigma, ilim, pc, xtol, ftol, numpy.diag(C), B, D)
         converged = status is not None
 
     return OptimizeResult(

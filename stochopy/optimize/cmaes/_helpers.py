@@ -53,9 +53,10 @@ def constrain(arxvalid, arx, xmean, xold, sigma, diagC, mueff, it, bnd_weights, 
     return arfitness, arxvalid, bnd_weights, dfithist, validfitval, iniphase
 
 
-def converge(it, ndim, maxiter, xmean, xold, arbestfitness, arfitness, arindex, sigma, insigma, B, D, C, ilim, pc, xtol, ftol):
+def converge(it, ndim, maxiter, xmean, xold, arbestfitness, arfitness, arindex, sigma, insigma, ilim, pc, xtol, ftol, diagC, B=None, D=None):
     status = None
     i = int(numpy.floor(numpy.mod(it, ndim)))
+    sqdiagC = numpy.sqrt(diagC)
 
     # Stop if maximum iteration is reached
     if it >= maxiter:
@@ -70,15 +71,15 @@ def converge(it, ndim, maxiter, xmean, xold, arbestfitness, arfitness, arindex, 
         status = 1
         
     # NoEffectAxis: stop if numerical precision problem
-    elif (numpy.abs(0.1 * sigma * B[:, i] * D[i]) < 1.0e-10).all():
+    elif B is not None and (numpy.abs(0.1 * sigma * B[:, i] * D[i]) < 1.0e-10).all():
         status = -2
         
     # NoEffectCoord: stop if too low coordinate axis deviations
-    elif (0.2 * sigma * numpy.sqrt(numpy.diag(C)) < 1.0e-10).any():
+    elif (0.2 * sigma * sqdiagC < 1.0e-10).any():
         status = -3
     
     # ConditionCov: stop if the condition number exceeds 1e14
-    elif D.max() > 1.0e7 * D.min():
+    elif D is not None and D.max() > 1.0e7 * D.min():
         status = -4
     
     # EqualFunValues: stop if the range of fitness values is zero
@@ -86,7 +87,7 @@ def converge(it, ndim, maxiter, xmean, xold, arbestfitness, arfitness, arindex, 
         status = -5
             
     # TolXUp: stop if x-changes larger than 1e3 times initial sigma
-    elif (sigma * numpy.sqrt(numpy.diag(C)) > 1.0e3 * insigma).any():
+    elif (sigma * sqdiagC > 1.0e3 * insigma).any():
         status = -6
         
     # TolFun: stop if fun-changes smaller than 1e-12
@@ -94,7 +95,7 @@ def converge(it, ndim, maxiter, xmean, xold, arbestfitness, arfitness, arindex, 
         status = -7
         
     # TolX: stop if x-changes smaller than 1e-11 times initial sigma
-    elif (sigma * numpy.append(numpy.abs(pc), numpy.sqrt(numpy.diag(C)).max()) < 1.0e-11 * insigma).all():
+    elif (sigma * numpy.append(numpy.abs(pc), sqdiagC.max()) < 1.0e-11 * insigma).all():
         status = -8
 
     return status
