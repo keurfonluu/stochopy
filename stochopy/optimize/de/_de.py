@@ -83,17 +83,13 @@ def minimize(
     # Parallel
     fun = parallelize(fun, args, sync, parallel)
 
-    # Initialize arrays
-    xall = numpy.empty((popsize, ndim, maxiter))
-    funall = numpy.empty((popsize, maxiter))
-    U = numpy.empty((popsize, ndim))
-
     # Initial population
     X = (
         x0
         if x0 is not None
         else numpy.random.uniform(lower, upper, (popsize, ndim)) 
     )
+    U = numpy.empty((popsize, ndim))
 
     # Evaluate initial population
     pfit = fun(X) if sync else numpy.array([fun(xx) for xx in X])
@@ -103,6 +99,12 @@ def minimize(
     gbidx = numpy.argmin(pbestfit)
     gfit = pbestfit[gbidx]
     gbest = numpy.copy(X[gbidx])
+
+    # Initialize arrays
+    xall = numpy.empty((popsize, ndim, maxiter))
+    funall = numpy.empty((popsize, maxiter))
+    xall[:, :, 0] = numpy.copy(X)
+    funall[:, 0] = numpy.copy(pfit)
 
     # Iterate until one of the termination criterion is satisfied
     it = 1
