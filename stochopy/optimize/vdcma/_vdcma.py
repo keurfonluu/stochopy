@@ -20,6 +20,7 @@ def minimize(
     sigma=0.1,
     muperc=0.5,
     xmean0=None,
+    seed=None,
     xtol=1.0e-8,
     ftol=1.0e-8,
     constraints=None,
@@ -65,6 +66,10 @@ def minimize(
     # Parallel
     funstd = parallelize(fun, args, True, workers)
     fun = lambda x: funstd(unstandardize(x))
+
+    # Seed
+    if seed is not None:
+        numpy.random.seed(seed)
 
     # Initialize arrays
     xall = numpy.empty((popsize, ndim, maxiter))

@@ -16,6 +16,7 @@ def sample(
     maxiter=100,
     nleap=10,
     stepsize=0.01,
+    seed=None,
     jac=None,
     finite_diff_abs_step=1.0e-4,
     constraints=None,
@@ -58,6 +59,10 @@ def sample(
         jac = lambda x: numerical_gradient(x, fun, args, finite_diff_abs_step)
     else:
         jac = lambda x: jac(x, *args)
+
+    # Seed
+    if seed is not None:
+        numpy.random.seed(seed)
 
     # Initialize arrays
     xall = numpy.empty((maxiter, ndim))

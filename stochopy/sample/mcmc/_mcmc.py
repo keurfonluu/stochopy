@@ -16,6 +16,7 @@ def sample(
     maxiter=100,
     stepsize=0.1,
     perc=1.0,
+    seed=None,
     constraints=None,
 ):
     # Cost function
@@ -47,6 +48,10 @@ def sample(
         raise ValueError()
 
     ndim_per_iter = max(1, int(perc * ndim))
+
+    # Seed
+    if seed is not None:
+        numpy.random.seed(seed)
     
     # Initialize arrays
     xall = numpy.empty((maxiter, ndim))

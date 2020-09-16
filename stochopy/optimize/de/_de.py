@@ -20,6 +20,7 @@ def minimize(
     mutation=0.5,
     recombination=0.1,
     strategy="rand1bin",
+    seed=None,
     xtol=1.0e-8,
     ftol=1.0e-8,
     constraints=None,
@@ -72,6 +73,10 @@ def minimize(
 
     # Parallel
     fun = parallelize(fun, args, sync, workers)
+
+    # Seed
+    if seed is not None:
+        numpy.random.seed(seed)
 
     # Initial population
     X = (
