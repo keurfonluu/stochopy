@@ -72,11 +72,6 @@ def minimize(
     if seed is not None:
         numpy.random.seed(seed)
 
-    # Initialize arrays
-    if return_all:
-        xall = numpy.empty((popsize, ndim, maxiter))
-        funall = numpy.empty((popsize, maxiter))
-
     # Initial mean
     xmean = (
         numpy.random.uniform(-1.0, 1.0, ndim)
@@ -118,8 +113,9 @@ def minimize(
     dfithist = numpy.ones(1)
 
     # Initialize arrays
-    xall = numpy.empty((popsize, ndim, maxiter))
-    funall = numpy.empty((popsize, maxiter))
+    if return_all:
+        xall = numpy.empty((popsize, ndim, maxiter))
+        funall = numpy.empty((popsize, maxiter))
     
     # VD-CMA
     nfev = 0
