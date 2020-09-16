@@ -26,6 +26,7 @@ def minimize(
     constraints=None,
     updating="deferred",
     workers=1,
+    return_all=False,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -96,10 +97,11 @@ def minimize(
     gbest = numpy.copy(X[gbidx])
 
     # Initialize arrays
-    xall = numpy.empty((popsize, ndim, maxiter))
-    funall = numpy.empty((popsize, maxiter))
-    xall[:, :, 0] = numpy.copy(X)
-    funall[:, 0] = numpy.copy(pfit)
+    if return_all:
+        xall = numpy.empty((popsize, ndim, maxiter))
+        funall = numpy.empty((popsize, maxiter))
+        xall[:, :, 0] = numpy.copy(X)
+        funall[:, 0] = numpy.copy(pfit)
 
     # Iterate until one of the termination criterion is satisfied
     it = 1
@@ -110,12 +112,13 @@ def minimize(
         r1 = numpy.random.rand(popsize, ndim)
         X, gbest, pbestfit, gfit, pfit, status = de_iter(it, X, U, gbest, pbestfit, gfit, pfit, F, CR, r1, maxiter, xtol, ftol, fun, mut, cons)
 
-        xall[:, :, it - 1] = numpy.copy(X)
-        funall[:, it - 1] = numpy.copy(pbestfit)
+        if return_all:
+            xall[:, :, it - 1] = numpy.copy(X)
+            funall[:, it - 1] = numpy.copy(pbestfit)
 
         converged = status is not None
 
-    return OptimizeResult(
+    res = OptimizeResult(
         x=gbest,
         success=status >= 0,
         status=status,
@@ -123,9 +126,12 @@ def minimize(
         fun=gfit,
         nfev=it * popsize,
         nit=it,
-        xall=xall[:, :, :it],
-        funall=funall[:, :it],
     )
+    if return_all:
+        res["xall"] = xall[:, :, :it]
+        res["funall"] = funall[:, :it]
+
+    return res
 
 
 def delete_shuffle_sync(popsize):

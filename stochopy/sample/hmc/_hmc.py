@@ -20,6 +20,7 @@ def sample(
     jac=None,
     finite_diff_abs_step=1.0e-4,
     constraints=None,
+    return_all=False,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -104,15 +105,18 @@ def sample(
             funall[i] = funall[i - 1]
 
     idx = numpy.argmin(funall)
-    return SampleResult(
+    res = SampleResult(
         x=xall[idx],
         fun=funall[idx],
         nfev=nfev,
         nit=maxiter,
         accept_ratio=n_accepted / maxiter,
-        xall=xall,
-        funall=funall,
     )
+    if return_all:
+        res["xall"] = xall
+        res["funall"] = funall
+
+    return res
 
 
 def count(fun):

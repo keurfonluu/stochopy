@@ -26,6 +26,7 @@ def minimize(
     constraints=None,
     updating="deferred",
     workers=1,
+    return_all=False,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -108,10 +109,11 @@ def minimize(
     gbest = numpy.copy(X[gbidx])
 
     # Initialize arrays
-    xall = numpy.empty((popsize, ndim, maxiter))
-    funall = numpy.empty((popsize, maxiter))
-    xall[:, :, 0] = numpy.copy(X)
-    funall[:, 0] = numpy.copy(pfit)
+    if return_all:
+        xall = numpy.empty((popsize, ndim, maxiter))
+        funall = numpy.empty((popsize, maxiter))
+        xall[:, :, 0] = numpy.copy(X)
+        funall[:, 0] = numpy.copy(pfit)
 
     # Iterate until one of the termination criterion is satisfied
     it = 1
@@ -123,15 +125,16 @@ def minimize(
         r2 = numpy.random.rand(popsize, ndim)
         X, V, pbest, gbest, pbestfit, gfit, pfit, status = pso_iter(it, X, V, pbest, gbest, pbestfit, gfit, pfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons)
 
-        xall[:, :, it - 1] = numpy.copy(X)
-        funall[:, it - 1] = numpy.copy(pfit)
+        if return_all:
+            xall[:, :, it - 1] = numpy.copy(X)
+            funall[:, it - 1] = numpy.copy(pfit)
 
         converged = status is not None
 
         if not converged and gamma:
             X, V, pbest, pbestfit = restart(it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxiter)
 
-    return OptimizeResult(
+    res = OptimizeResult(
         x=gbest,
         success=status >= 0,
         status=status,
@@ -139,9 +142,12 @@ def minimize(
         fun=gfit,
         nfev=it * popsize,
         nit=it,
-        xall=xall[:, :, :it],
-        funall=funall[:, :it],
     )
+    if return_all:
+        res["xall"] = xall[:, :, :it]
+        res["funall"] = funall[:, :it]
+
+    return res
 
 
 def mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons):

@@ -25,6 +25,7 @@ def minimize(
     ftol=1.0e-8,
     constraints=None,
     workers=1,
+    return_all=False,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -72,8 +73,9 @@ def minimize(
         numpy.random.seed(seed)
 
     # Initialize arrays
-    xall = numpy.empty((popsize, ndim, maxiter))
-    funall = numpy.empty((popsize, maxiter))
+    if return_all:
+        xall = numpy.empty((popsize, ndim, maxiter))
+        funall = numpy.empty((popsize, maxiter))
 
     # Initial mean
     xmean = (
@@ -154,8 +156,9 @@ def minimize(
             arfitness = fun(arxvalid)
         nfev += popsize
 
-        xall[:, :, it - 1] = unstandardize(arxvalid)
-        funall[:, it - 1] = arfitness.copy()
+        if return_all:
+            xall[:, :, it - 1] = unstandardize(arxvalid)
+            funall[:, it - 1] = arfitness.copy()
         
         # Sort by fitness and compute weighted mean into xmean
         arindex = numpy.argsort(arfitness)
@@ -241,7 +244,7 @@ def minimize(
         status = converge(it, ndim, maxiter, xmean, xold, arbestfitness, arfitness, arindex, sigma, insigma, ilim, pc, xtol, ftol, diagC)
         converged = status is not None
 
-    return OptimizeResult(
+    res = OptimizeResult(
         x=unstandardize(arxvalid[arindex[0]]),
         success=status >= 0,
         status=status,
@@ -249,9 +252,12 @@ def minimize(
         fun=arfitness[arindex[0]],
         nfev=nfev,
         nit=it,
-        xall=xall[:, :, :it],
-        funall=funall[:, :it],
     )
+    if return_all:
+        res["xall"] = xall[:, :, :it]
+        res["funall"] = funall[:, :it]
+
+    return res
 
 
 def pvec_and_qvec(vn, norm_v2, y, weights=None):

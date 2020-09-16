@@ -18,6 +18,7 @@ def sample(
     perc=1.0,
     seed=None,
     constraints=None,
+    return_all=False,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -87,15 +88,18 @@ def sample(
                 break
 
     idx = numpy.argmin(funall)
-    return SampleResult(
+    res = SampleResult(
         x=xall[idx],
         fun=funall[idx],
         nfev=maxiter,
         nit=maxiter,
         accept_ratio=n_accepted / maxiter,
-        xall=xall,
-        funall=funall,
     )
+    if return_all:
+        res["xall"] = xall
+        res["funall"] = funall
+
+    return res
 
 
 register("mcmc", sample)

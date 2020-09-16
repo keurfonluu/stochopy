@@ -22,10 +22,11 @@ def minimize(
     constraints=None,
     updating="deferred",
     workers=1,
+    return_all=False,
 ):
     competitivity = None
     
-    return cpso(fun, bounds, x0, args, maxiter, popsize, inertia, cognitivity, sociability, competitivity, seed, xtol, ftol, constraints, updating, workers)
+    return cpso(fun, bounds, x0, args, maxiter, popsize, inertia, cognitivity, sociability, competitivity, seed, xtol, ftol, constraints, updating, workers, return_all)
 
 
 register("pso", minimize)
