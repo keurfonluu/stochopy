@@ -16,7 +16,7 @@ def sample(
     maxiter=100,
     stepsize=0.1,
     perc=1.0,
-    constrain=False,
+    constraints=None,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -66,7 +66,7 @@ def sample(
             xall[i, j : jmax + 1] += perturbation
 
             accept = False
-            if in_search_space(xall[i], lower, upper, constrain):
+            if in_search_space(xall[i], lower, upper, constraints):
                 funall[i] = fun(xall[i], *args)
                 log_alpha = min(0.0, funall[i - 1] - funall[i])
                 accept = log_alpha > numpy.log(numpy.random.rand())

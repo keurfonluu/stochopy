@@ -18,7 +18,7 @@ def sample(
     stepsize=0.01,
     jac=None,
     finite_diff_abs_step=1.0e-4,
-    constrain=False,
+    constraints=None,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -81,7 +81,7 @@ def sample(
         p -= 0.5 * stepsize * jac(q)  # Last half momentum step
 
         accept = False
-        if in_search_space(q, lower, upper, constrain):
+        if in_search_space(q, lower, upper, constraints):
             U0 = fun(q0, *args)
             K0 = 0.5 * numpy.square(p0).sum()
             U = fun(q, *args)

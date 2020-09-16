@@ -1,6 +1,6 @@
 import numpy
 
-from ._helpers import constrain, converge
+from ._constraints import _constraints_map
 from .._common import messages, parallelize
 from .._helpers import register, OptimizeResult
 
@@ -21,8 +21,8 @@ def minimize(
     xmean0=None,
     xtol=1.0e-8,
     ftol=1.0e-8,
-    constraints=False,
-    parallel=False,
+    constraints=None,
+    workers=1,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -57,12 +57,12 @@ def minimize(
         if numpy.ndim(xmean0) != 1 or len(xmean0) != ndim:
             raise ValueError()
 
-    # Initialize arrays
-    xall = numpy.empty((popsize, ndim, maxiter))
-    funall = numpy.empty((popsize, maxiter))
+    # Constraints
+    if constraints is not None:
+        cons = _constraints_map[constraints]
 
     # Parallel
-    funstd = parallelize(fun, args, True, parallel)
+    funstd = parallelize(fun, args, True, workers)
     fun = lambda x: funstd(unstandardize(x))
 
     # Initialize arrays
@@ -105,6 +105,10 @@ def minimize(
     bnd_weights = numpy.zeros(ndim)
     dfithist = numpy.ones(1)
 
+    # Initialize arrays
+    xall = numpy.empty((popsize, ndim, maxiter))
+    funall = numpy.empty((popsize, maxiter))
+
     # (mu, lambda)-CMA-ES
     nfev = 0
     eigeneval = 0
@@ -124,8 +128,8 @@ def minimize(
         arxvalid = arx.copy()
             
         # Evaluate fitness
-        if constraints:
-            arfitness, arxvalid, bnd_weights, dfithist, validfitval, iniphase = constrain(
+        if constraints == "Penalize":
+            arfitness, arxvalid, bnd_weights, dfithist, validfitval, iniphase = cons(
                 arxvalid, arx, xmean, xold, sigma, numpy.diag(C), mueff, it, bnd_weights, dfithist, validfitval, iniphase, fun
             )
         else:
@@ -185,6 +189,54 @@ def minimize(
         xall=xall[:, :, :it],
         funall=funall[:, :it],
     )
+
+
+def converge(it, ndim, maxiter, xmean, xold, arbestfitness, arfitness, arindex, sigma, insigma, ilim, pc, xtol, ftol, diagC, B=None, D=None):
+    status = None
+    i = int(numpy.floor(numpy.mod(it, ndim)))
+    sqdiagC = numpy.sqrt(diagC)
+
+    # Stop if maximum iteration is reached
+    if it >= maxiter:
+        status = -1
+    
+    # Stop if mean position changes less than xtol
+    elif numpy.linalg.norm(xold - xmean) <= xtol and arfitness[arindex[0]] < ftol:
+        status = 0
+        
+    # Stop if fitness is less than ftol
+    elif arfitness[arindex[0]] <= ftol:
+        status = 1
+        
+    # NoEffectAxis: stop if numerical precision problem
+    elif B is not None and (numpy.abs(0.1 * sigma * B[:, i] * D[i]) < 1.0e-10).all():
+        status = -2
+        
+    # NoEffectCoord: stop if too low coordinate axis deviations
+    elif (0.2 * sigma * sqdiagC < 1.0e-10).any():
+        status = -3
+    
+    # ConditionCov: stop if the condition number exceeds 1e14
+    elif D is not None and D.max() > 1.0e7 * D.min():
+        status = -4
+    
+    # EqualFunValues: stop if the range of fitness values is zero
+    elif it >= ilim and arbestfitness[it - ilim : it + 1].max() - arbestfitness[it-ilim:it+1].min() < 1.0e-10:
+        status = -5
+            
+    # TolXUp: stop if x-changes larger than 1e3 times initial sigma
+    elif (sigma * sqdiagC > 1.0e3 * insigma).any():
+        status = -6
+        
+    # TolFun: stop if fun-changes smaller than 1e-12
+    elif it > 2 and numpy.append(arfitness, arbestfitness).max() - numpy.append(arfitness, arbestfitness).min() < 1.0e-12:
+        status = -7
+        
+    # TolX: stop if x-changes smaller than 1e-11 times initial sigma
+    elif (sigma * numpy.append(numpy.abs(pc), sqdiagC.max()) < 1.0e-11 * insigma).all():
+        status = -8
+
+    return status
 
 
 register("cmaes", minimize)

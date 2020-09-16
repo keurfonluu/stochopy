@@ -1,6 +1,7 @@
 import numpy
 
-from ..cmaes._helpers import constrain, converge
+from ..cmaes._cmaes import converge
+from ..cmaes._constraints import _constraints_map
 from .._common import messages, parallelize
 from .._helpers import register, OptimizeResult
 
@@ -21,8 +22,8 @@ def minimize(
     xmean0=None,
     xtol=1.0e-8,
     ftol=1.0e-8,
-    constraints=False,
-    parallel=False,
+    constraints=None,
+    workers=1,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -57,12 +58,12 @@ def minimize(
         if numpy.ndim(xmean0) != 1 or len(xmean0) != ndim:
             raise ValueError()
 
-    # Initialize arrays
-    xall = numpy.empty((popsize, ndim, maxiter))
-    funall = numpy.empty((popsize, maxiter))
+    # Constraints
+    if constraints is not None:
+        cons = _constraints_map[constraints]
 
     # Parallel
-    funstd = parallelize(fun, args, True, parallel)
+    funstd = parallelize(fun, args, True, workers)
     fun = lambda x: funstd(unstandardize(x))
 
     # Initialize arrays
@@ -108,6 +109,10 @@ def minimize(
     # Initialize boundaries weights
     bnd_weights = numpy.zeros(ndim)
     dfithist = numpy.ones(1)
+
+    # Initialize arrays
+    xall = numpy.empty((popsize, ndim, maxiter))
+    funall = numpy.empty((popsize, maxiter))
     
     # VD-CMA
     nfev = 0
@@ -136,8 +141,8 @@ def minimize(
         diagC = numpy.diag(numpy.dot(numpy.dot(numpy.diag(dvec), numpy.eye(ndim) + numpy.outer(vvec, vvec)), numpy.diag(dvec)))
             
         # Evaluate fitness
-        if constraints:
-            arfitness, arxvalid, bnd_weights, dfithist, validfitval, iniphase = constrain(
+        if constraints == "Penalize":
+            arfitness, arxvalid, bnd_weights, dfithist, validfitval, iniphase = cons(
                 arxvalid, arx, xmean, xold, sigma, diagC, mueff, it, bnd_weights, dfithist, validfitval, iniphase, fun
             )
         else:

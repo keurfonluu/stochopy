@@ -1,5 +1,6 @@
 import numpy
 
+from ._constraints import _constraints_map
 from .._common import messages, parallelize, selection_sync, selection_async
 from .._helpers import register, OptimizeResult
 
@@ -15,15 +16,15 @@ def minimize(
     args=(),
     maxiter=100,
     popsize=10,
-    w=0.7298,
-    c1=1.49618,
-    c2=1.49618,
-    gamma=1.0,
+    inertia=0.7298,
+    cognitivity=1.49618,
+    sociability=1.49618,
+    competitivity=1.0,
     xtol=1.0e-8,
     ftol=1.0e-8,
-    constraints=False,
-    sync=True,
-    parallel=False,
+    constraints=None,
+    updating="deferred",
+    workers=1,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -48,31 +49,40 @@ def minimize(
     if x0 is not None and len(x0) != popsize:
         raise ValueError()
 
-    # PSO parameters
-    if not 0.0 <= w <= 1.0:
+    # CPSO parameters
+    if not 0.0 <= inertia <= 1.0:
         raise ValueError()
 
-    if not 0.0 <= c1 <= 4.0:
+    if not 0.0 <= cognitivity <= 4.0:
         raise ValueError()
 
-    if not 0.0 <= c2 <= 4.0:
+    if not 0.0 <= sociability <= 4.0:
         raise ValueError()
 
-    if gamma is not None and not 0.0 <= gamma <= 2.0:
+    if competitivity is not None and not 0.0 <= competitivity <= 2.0:
         raise ValueError()
+
+    if updating not in {"immediate", "deferred"}:
+        raise ValueError()
+
+    w = inertia
+    c1 = cognitivity
+    c2 = sociability
+    gamma = competitivity
+    sync = updating == "deferred"
 
     # Swarm maximum radius
     if gamma:
         delta = numpy.log(1.0 + 0.003 * popsize) / numpy.max((0.2, numpy.log(0.01 * maxiter)))
 
     # Constraints
-    cons = constrain(constraints, lower, upper, sync)
+    cons = _constraints_map[constraints](lower, upper, sync)
 
     # Synchronize
     pso_iter = pso_sync if sync else pso_async
 
     # Parallel
-    fun = parallelize(fun, args, sync, parallel)
+    fun = parallelize(fun, args, sync, workers)
 
     # Initial population
     X = (
@@ -127,55 +137,6 @@ def minimize(
         xall=xall[:, :, :it],
         funall=funall[:, :it],
     )
-    
-
-def constrain(constraints, lower, upper, sync):
-    def shrink(X, V, maskl, masku):
-        condl = maskl.any()
-        condu = masku.any()
-
-        if condl and condu:
-            bl = (lower[maskl] - X[maskl]) / V[maskl]
-            bu = (upper[masku] - X[masku]) / V[masku]
-            return min(bl.min(), bu.min())
-
-        elif condl and not condu:
-            bl = (lower[maskl] - X[maskl]) / V[maskl]
-            return bl.min()
-
-        elif not condl and condu:
-            bu = (upper[masku] - X[masku]) / V[masku]
-            return bu.min()
-
-        else:
-            return 1.0
-
-    if constraints:
-        if sync:
-            def cons(X, V):
-                Xcand = X + V
-                maskl = Xcand < lower
-                masku = Xcand > upper
-                beta = numpy.array([shrink(x, v, ml, mu) for x, v, ml, mu in zip(X, V, maskl, masku)])
-                V *= beta[:, None]
-
-                return X + V, V
-
-        else:
-            def cons(X, V):
-                Xcand = X + V
-                maskl = Xcand < lower
-                masku = Xcand > upper
-                beta = shrink(X, V, maskl, masku)
-                V *= beta
-
-                return X + V, V
-
-    else:
-        def cons(X, V):
-            return X + V, V
-    
-    return cons
 
 
 def mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons):

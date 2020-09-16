@@ -13,18 +13,18 @@ def minimize(
     args=(),
     maxiter=100,
     popsize=10,
-    w=0.7298,
-    c1=1.49618,
-    c2=1.49618,
+    inertia=0.7298,
+    cognitivity=1.49618,
+    sociability=1.49618,
     xtol=1.0e-8,
     ftol=1.0e-8,
-    constraints=False,
-    sync=True,
-    parallel=False,
+    constraints=None,
+    updating="deferred",
+    workers=1,
 ):
-    gamma = None
+    competitivity = None
     
-    return cpso(fun, bounds, x0, args, maxiter, popsize, w, c1, c2, gamma, xtol, ftol, constraints, sync, parallel)
+    return cpso(fun, bounds, x0, args, maxiter, popsize, inertia, cognitivity, sociability, competitivity, xtol, ftol, constraints, updating, workers)
 
 
 register("pso", minimize)

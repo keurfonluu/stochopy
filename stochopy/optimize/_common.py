@@ -16,7 +16,9 @@ messages = {
 }
 
 
-def parallelize(fun, args, sync, parallel):
+def parallelize(fun, args, sync, workers):
+    parallel = workers not in {0, 1}
+
     if sync:
         if parallel:
             raise NotImplementedError()

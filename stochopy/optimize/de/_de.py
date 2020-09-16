@@ -1,6 +1,7 @@
 import numpy
 
-from ._helpers import delete_shuffle_sync, delete_shuffle_async, strategies
+from ._constraints import _constraints_map
+from ._strategy import _strategy_map
 from .._common import messages, parallelize, selection_sync, selection_async
 from .._helpers import register, OptimizeResult
 
@@ -16,14 +17,14 @@ def minimize(
     args=(),
     maxiter=100,
     popsize=10,
-    CR=0.1,
-    F=0.5,
-    strategy="rand1",
+    mutation=0.5,
+    recombination=0.1,
+    strategy="rand1bin",
     xtol=1.0e-8,
     ftol=1.0e-8,
-    constraints=False,
-    sync=True,
-    parallel=False,
+    constraints=None,
+    updating="deferred",
+    workers=1,
 ):
     # Cost function
     if not hasattr(fun, "__call__"):
@@ -49,22 +50,28 @@ def minimize(
         raise ValueError()
 
     # DE parameters
-    if not 0.0 <= F <= 2.0:
+    if not 0.0 <= mutation <= 2.0:
         raise ValueError()
 
-    if not 0.0 <= CR <= 1.0:
+    if not 0.0 <= recombination <= 1.0:
         raise ValueError()
 
-    mut = strategies[strategy]
+    if updating not in {"immediate", "deferred"}:
+        raise ValueError()
+
+    F = mutation
+    CR = recombination
+    mut = _strategy_map[strategy]
+    sync = updating == "deferred"
 
     # Constraints
-    cons = constrain(constraints, lower, upper)
+    cons = _constraints_map[constraints](lower, upper)
 
     # Synchronize
     de_iter = de_sync if sync else de_async
 
     # Parallel
-    fun = parallelize(fun, args, sync, parallel)
+    fun = parallelize(fun, args, sync, workers)
 
     # Initial population
     X = (
@@ -116,16 +123,14 @@ def minimize(
     )
 
 
-def constrain(constraints, lower, upper):
-    if constraints:
-        return lambda U: numpy.where(
-                numpy.logical_or(U < lower, U > upper),
-                numpy.random.uniform(lower, upper, U.shape),
-                U,
-            )
+def delete_shuffle_sync(popsize):
+    return numpy.transpose([
+        delete_shuffle_async(i, popsize) for i in range(popsize)
+    ])
 
-    else:
-        return lambda U: U
+
+def delete_shuffle_async(i, popsize):
+    return numpy.random.permutation(numpy.delete(numpy.arange(popsize), i))
 
 
 def de_sync(it, X, U, gbest, pbestfit, gfit, pfit, F, CR, r1, maxiter, xtol, ftol, fun, mut, cons):
