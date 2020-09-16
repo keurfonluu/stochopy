@@ -38,6 +38,21 @@ def parallelize(fun, args, sync, workers):
     return wrapper
 
 
+def lhs(popsize, ndim, bounds=None):
+    x = numpy.random.uniform(size=(popsize, ndim)) / popsize
+    x += numpy.linspace(-1.0, 1.0, popsize, endpoint=False)[:, None]
+    pop = numpy.transpose([
+        x[numpy.random.permutation(popsize), i] for i in range(ndim)
+    ])
+
+    if bounds is not None:
+        lower, upper = numpy.transpose(bounds)
+        pop *= 0.5 * (upper - lower)
+        pop += 0.5 * (upper + lower)
+
+    return pop
+
+
 def selection_sync(it, cand, xbest, x, xfun, maxiter, xtol, ftol, fun):
     # Selection
     candfun = fun(cand)

@@ -1,7 +1,7 @@
 import numpy
 
 from ._constraints import _constraints_map
-from .._common import messages, parallelize, selection_sync, selection_async
+from .._common import messages, lhs, parallelize, selection_sync, selection_async
 from .._helpers import register, OptimizeResult
 
 __all__ = [
@@ -93,7 +93,7 @@ def minimize(
     X = (
         x0
         if x0 is not None
-        else numpy.random.uniform(lower, upper, (popsize, ndim)) 
+        else lhs(popsize, ndim, bounds)
     )
     V = numpy.zeros((popsize, ndim))
     pbest = numpy.copy(X)
