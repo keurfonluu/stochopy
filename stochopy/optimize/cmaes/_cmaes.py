@@ -159,10 +159,11 @@ def minimize(
                 
         # Adapt covariance matrix C
         artmp = (arx[arindex[:mu], :] - numpy.tile(xold, (mu, 1))) / sigma
+        tmp = 0.0 if cond else c1 * cc * (2.0 - cc) * C
         C *= (1.0 - c1 - cmu)
         C += cmu * numpy.dot(numpy.dot(artmp.T, numpy.diag(weights)), artmp)
         C += c1 * numpy.outer(pc, pc)
-        C += c1 * (cc * (2.0 - cc) * C) if cond else 0.0
+        C += tmp
             
         # Adapt step size sigma
         sigma *= numpy.exp((cs / damps) * (numpy.linalg.norm(ps) / chind - 1.0))
