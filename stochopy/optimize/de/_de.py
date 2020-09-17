@@ -26,7 +26,7 @@ def minimize(
     constraints=None,
     updating="deferred",
     workers=1,
-    backend="joblib",
+    backend=None,
     return_all=False,
 ):
     # Cost function

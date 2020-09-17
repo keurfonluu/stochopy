@@ -25,7 +25,7 @@ def minimize(
     ftol=1.0e-8,
     constraints=None,
     workers=1,
-    backend="joblib",
+    backend=None,
     return_all=False,
 ):
     # Cost function

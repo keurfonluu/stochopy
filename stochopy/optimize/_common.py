@@ -3,6 +3,12 @@ from joblib import delayed, Parallel
 import numpy
 
 
+prefer = {
+    "loky": "processes",
+    "threading": "threads",
+}
+
+
 # Failed if < 0, success otherwise
 messages = {
     -8: "TolX",
@@ -19,8 +25,10 @@ messages = {
 
 
 def run(optimizer, fun, args, sync, workers, backend, optargs=()):
-    if workers not in {0, 1} and backend == "joblib":
-        with Parallel(n_jobs=workers, prefer="threads") as parallel:
+    backend = backend if backend else "threading"
+
+    if backend in prefer and workers not in {0, 1}:
+        with Parallel(n_jobs=workers, prefer=prefer[backend]) as parallel:
             fun = wrapfun(fun, args, sync, backend, parallel)
             res = optimizer(fun, *optargs)
 
@@ -35,7 +43,7 @@ def run(optimizer, fun, args, sync, workers, backend, optargs=()):
 def wrapfun(fun, args, sync, backend, parallel):
     if sync:
         if parallel:
-            if backend == "joblib":
+            if backend in prefer:
                 fun = delayed(fun)
 
                 def wrapper(x):

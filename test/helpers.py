@@ -32,7 +32,7 @@ def optimize_parallel(method, options, xref):
 
     # Parallel
     if "updating" in options and options["updating"] == "deferred":
-        for backend in ["joblib", "mpi"]:
+        for backend in ["threading", "mpi"]:
             options.update({
                 "workers": 2,
                 "backend": backend,
