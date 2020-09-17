@@ -13,19 +13,11 @@ import helpers
     ],
 )
 def test_cmaes(options, xref):
-    # Serial
     options.update({
         "sigma": 0.1,
         "muperc": 0.5,
     })
-    helpers.optimize("cmaes", options, xref)
-
-    # Parallel
-    options.update({
-        "workers": 2,
-        "backend": "joblib",
-    })
-    helpers.optimize("cmaes", options, xref)
+    helpers.optimize_parallel("cmaes", options, xref)
 
 
 @pytest.mark.parametrize(
@@ -38,21 +30,12 @@ def test_cmaes(options, xref):
     ],
 )
 def test_cpso(options, xref):
-    # Serial
     options.update({
         "cognitivity": 1.49618,
         "sociability": 1.49618,
         "competitivity": 1.0,
     })
-    helpers.optimize("cpso", options, xref)
-
-    # Parallel
-    if options["updating"] == "deferred":
-        options.update({
-            "workers": 2,
-            "backend": "joblib",
-        })
-        helpers.optimize("cpso", options, xref)
+    helpers.optimize_parallel("cpso", options, xref)
 
 
 @pytest.mark.parametrize(
@@ -68,20 +51,11 @@ def test_cpso(options, xref):
     ],
 )
 def test_de(options, xref):
-    # Serial
     options.update({
         "recombination": 0.1,
         "mutation": 0.5,
     })
-    helpers.optimize("de", options, xref)
-
-    # Parallel
-    if options["updating"] == "deferred":
-        options.update({
-            "workers": 2,
-            "backend": "joblib",
-        })
-        helpers.optimize("de", options, xref)
+    helpers.optimize_parallel("de", options, xref)
 
 
 @pytest.mark.parametrize(
@@ -94,20 +68,11 @@ def test_de(options, xref):
     ],
 )
 def test_pso(options, xref):
-    # Serial
     options.update({
         "cognitivity": 1.49618,
         "sociability": 1.49618,
     })
-    helpers.optimize("pso", options, xref)
-
-    # Parallel
-    if options["updating"] == "deferred":
-        options.update({
-            "workers": 2,
-            "backend": "joblib",
-        })
-        helpers.optimize("pso", options, xref)
+    helpers.optimize_parallel("pso", options, xref)
 
 
 @pytest.mark.parametrize(
@@ -120,16 +85,8 @@ def test_pso(options, xref):
     ],
 )
 def test_vdcma(options, xref):
-    # Serial
     options.update({
         "sigma": 0.1,
         "muperc": 0.5,
     })
-    helpers.optimize("vdcma", options, xref)
-
-    # Parallel
-    options.update({
-        "workers": 2,
-        "backend": "joblib",
-    })
-    helpers.optimize("vdcma", options, xref)
+    helpers.optimize_parallel("vdcma", options, xref)

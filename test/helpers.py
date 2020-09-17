@@ -26,6 +26,20 @@ def optimize(method, options, xref):
         assert numpy.all(x.xall - 1.0e-15 <= 5.12)
 
 
+def optimize_parallel(method, options, xref):
+    # Serial
+    optimize(method, options, xref)
+
+    # Parallel
+    if "updating" in options and options["updating"] == "deferred":
+        for backend in ["joblib", "mpi"]:
+            options.update({
+                "workers": 2,
+                "backend": backend,
+            })
+            optimize(method, options, xref)
+
+
 def sample(method, options, xref):
     options.update({"seed": 42})
     fun, bounds = rosenbrock()
