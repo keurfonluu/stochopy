@@ -99,20 +99,19 @@ def de(fun, bounds, x0, maxiter, popsize, F, CR, mut, constraints, sync, xtol, f
 
     # Evaluate initial population
     pfit = fun(X) if sync else numpy.array([fun(xx) for xx in X])
-    # pfit = numpy.array([fun(xx) for xx in X])
-    pbestfit = numpy.array(pfit)
+    pbestfit = pfit.copy()
 
     # Initial best solution
     gbidx = numpy.argmin(pbestfit)
     gfit = pbestfit[gbidx]
-    gbest = numpy.copy(X[gbidx])
+    gbest = X[gbidx].copy()
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((popsize, ndim, maxiter))
-        funall = numpy.empty((popsize, maxiter))
-        xall[:, :, 0] = numpy.copy(X)
-        funall[:, 0] = numpy.copy(pfit)
+        xall = numpy.empty((maxiter, popsize, ndim))
+        funall = numpy.empty((maxiter, popsize))
+        xall[0] = X.copy()
+        funall[0] = pfit.copy()
 
     # Iterate until one of the termination criterion is satisfied
     it = 1
@@ -124,8 +123,8 @@ def de(fun, bounds, x0, maxiter, popsize, F, CR, mut, constraints, sync, xtol, f
         X, gbest, pbestfit, gfit, pfit, status = de_iter(it, X, U, gbest, pbestfit, gfit, pfit, F, CR, r1, maxiter, xtol, ftol, fun, mut, cons)
 
         if return_all:
-            xall[:, :, it - 1] = numpy.copy(X)
-            funall[:, it - 1] = numpy.copy(pbestfit)
+            xall[it - 1] = X.copy()
+            funall[it - 1] = pbestfit.copy()
 
         converged = status is not None
 
@@ -139,8 +138,8 @@ def de(fun, bounds, x0, maxiter, popsize, F, CR, mut, constraints, sync, xtol, f
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:, :, :it]
-        res["funall"] = funall[:, :it]
+        res["xall"] = xall[:it]
+        res["funall"] = funall[:it]
 
     return res
 

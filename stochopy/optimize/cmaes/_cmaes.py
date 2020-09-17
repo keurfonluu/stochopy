@@ -116,8 +116,8 @@ def cmaes(funstd, bounds, x0, maxiter, popsize, sigma, muperc, xmean0, constrain
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((popsize, ndim, maxiter))
-        funall = numpy.empty((popsize, maxiter))
+        xall = numpy.empty((maxiter, popsize, ndim))
+        funall = numpy.empty((maxiter, popsize))
 
     # (mu, lambda)-CMA-ES
     nfev = 0
@@ -147,8 +147,8 @@ def cmaes(funstd, bounds, x0, maxiter, popsize, sigma, muperc, xmean0, constrain
         nfev += popsize
 
         if return_all:
-            xall[:, :, it - 1] = unstandardize(arxvalid)
-            funall[:, it - 1] = arfitness.copy()
+            xall[it - 1] = unstandardize(arxvalid)
+            funall[it - 1] = arfitness.copy()
         
         # Sort by fitness and compute weighted mean into xmean
         arindex = numpy.argsort(arfitness)
@@ -200,8 +200,8 @@ def cmaes(funstd, bounds, x0, maxiter, popsize, sigma, muperc, xmean0, constrain
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:, :, :it]
-        res["funall"] = funall[:, :it]
+        res["xall"] = xall[:it]
+        res["funall"] = funall[:it]
 
     return res
 

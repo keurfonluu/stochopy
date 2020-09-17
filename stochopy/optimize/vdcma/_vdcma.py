@@ -120,8 +120,8 @@ def vdcma(funstd, bounds, x0, maxiter, popsize, sigma, muperc, xmean0, constrain
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((popsize, ndim, maxiter))
-        funall = numpy.empty((popsize, maxiter))
+        xall = numpy.empty((maxiter, popsize, ndim))
+        funall = numpy.empty((maxiter, popsize))
     
     # VD-CMA
     nfev = 0
@@ -159,8 +159,8 @@ def vdcma(funstd, bounds, x0, maxiter, popsize, sigma, muperc, xmean0, constrain
         nfev += popsize
 
         if return_all:
-            xall[:, :, it - 1] = unstandardize(arxvalid)
-            funall[:, it - 1] = arfitness.copy()
+            xall[it - 1] = unstandardize(arxvalid)
+            funall[it - 1] = arfitness.copy()
         
         # Sort by fitness and compute weighted mean into xmean
         arindex = numpy.argsort(arfitness)
@@ -256,8 +256,8 @@ def vdcma(funstd, bounds, x0, maxiter, popsize, sigma, muperc, xmean0, constrain
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:, :, :it]
-        res["funall"] = funall[:, :it]
+        res["xall"] = xall[:it]
+        res["funall"] = funall[:it]
 
     return res
 

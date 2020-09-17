@@ -107,23 +107,23 @@ def cpso(fun, bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync,
         else lhs(popsize, ndim, bounds)
     )
     V = numpy.zeros((popsize, ndim))
-    pbest = numpy.copy(X)
+    pbest = X.copy()
 
     # Evaluate initial population
     pfit = fun(X) if sync else numpy.array([fun(xx) for xx in X])
-    pbestfit = numpy.array(pfit)
+    pbestfit = pfit.copy()
 
     # Initial best solution
     gbidx = numpy.argmin(pbestfit)
     gfit = pbestfit[gbidx]
-    gbest = numpy.copy(X[gbidx])
+    gbest = X[gbidx].copy()
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((popsize, ndim, maxiter))
-        funall = numpy.empty((popsize, maxiter))
-        xall[:, :, 0] = numpy.copy(X)
-        funall[:, 0] = numpy.copy(pfit)
+        xall = numpy.empty((maxiter, popsize, ndim))
+        funall = numpy.empty((maxiter, popsize))
+        xall[0] = X.copy()
+        funall[0] = pfit.copy()
 
     # Iterate until one of the termination criterion is satisfied
     it = 1
@@ -136,8 +136,8 @@ def cpso(fun, bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync,
         X, V, pbest, gbest, pbestfit, gfit, pfit, status = pso_iter(it, X, V, pbest, gbest, pbestfit, gfit, pfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons)
 
         if return_all:
-            xall[:, :, it - 1] = numpy.copy(X)
-            funall[:, it - 1] = numpy.copy(pfit)
+            xall[it - 1] = X.copy()
+            funall[it - 1] = pfit.copy()
 
         converged = status is not None
 
@@ -154,8 +154,8 @@ def cpso(fun, bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync,
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:, :, :it]
-        res["funall"] = funall[:, :it]
+        res["xall"] = xall[:it]
+        res["funall"] = funall[:it]
 
     return res
 
@@ -211,7 +211,7 @@ def restart(it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxite
             idx = pbestfit.argsort()[:-nw - 1:-1]
             V[idx] = numpy.zeros((nw, ndim))
             X[idx] = numpy.random.uniform(lower, upper, (nw, ndim))
-            pbest[idx] = numpy.copy(X[idx])
+            pbest[idx] = X[idx].copy()
             pbestfit[idx] = numpy.full(nw, 1.0e30)
 
     return X, V, pbest, pbestfit

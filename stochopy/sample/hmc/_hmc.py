@@ -74,10 +74,10 @@ def sample(
     # Leap-frog algorithm
     n_accepted = 0
     for i in range(1, maxiter):
-        q = numpy.copy(xall[i - 1])
+        q = xall[i - 1].copy()
         p = numpy.random.randn(ndim)  # Random momentum
-        q0 = numpy.copy(q)
-        p0 = numpy.copy(p)
+        q0 = q.copy()
+        p0 = p.copy()
         
         p -= 0.5 * stepsize * jac(q)  # First half momentum step
         q += stepsize * p             # First full position step
@@ -134,8 +134,8 @@ def count(fun):
 
 def numerical_gradient(x, fun, args, finite_diff_abs_step):
     ndim = len(x)
-    x1 = numpy.copy(x)
-    x2 = numpy.copy(x)
+    x1 = x.copy()
+    x2 = x.copy()
 
     grad = numpy.empty(ndim)
     for i in range(ndim):

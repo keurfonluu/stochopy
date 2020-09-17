@@ -68,7 +68,7 @@ def sample(
             jmax = min(ndim, j + ndim_per_iter - 1)
             perturbation = numpy.random.randn(jmax - j + 1) * stepsize[j : jmax + 1]
 
-            xall[i] = numpy.copy(xall[i - 1])
+            xall[i] = xall[i - 1].copy()
             xall[i, j : jmax + 1] += perturbation
 
             accept = False
