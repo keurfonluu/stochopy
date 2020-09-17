@@ -43,7 +43,29 @@ def wrapfun(fun, args, sync, backend, parallel):
                     return numpy.array(f)
 
             elif backend == "mpi":
-                raise NotImplementedError()
+                try:
+                    from mpi4py import MPI
+                except ImportError:
+                    raise ImportError("parallelization using MPI requires mpi4py to be installed")
+
+                mpi_comm = MPI.COMM_WORLD
+                mpi_rank = mpi_comm.Get_rank()
+                mpi_size = mpi_comm.Get_size()
+                mpi_double = MPI.DOUBLE
+
+                def wrapper(x):
+                    popsize = len(x)
+                    f = numpy.zeros(popsize)
+                    fmpi = numpy.zeros(popsize)
+
+                    mpi_comm.Bcast([x, mpi_double], root=0)
+                    for i in numpy.arange(mpi_rank, popsize, mpi_size):
+                        fmpi[i] = fun(x[i], *args)
+                    mpi_comm.Barrier()
+
+                    mpi_comm.Allreduce([fmpi, mpi_double], [f, mpi_double], op=MPI.SUM)
+
+                    return f
 
             else:
                 raise ValueError(f"unknown backend '{backend}'")
