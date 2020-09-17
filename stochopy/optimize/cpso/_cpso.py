@@ -1,7 +1,7 @@
 import numpy
 
 from ._constraints import _constraints_map
-from .._common import messages, lhs, parallelize, selection_sync, selection_async
+from .._common import messages, lhs, run, selection_sync, selection_async
 from .._helpers import register, OptimizeResult
 
 __all__ = [
@@ -26,6 +26,7 @@ def minimize(
     constraints=None,
     updating="deferred",
     workers=1,
+    backend="joblib",
     return_all=False,
 ):
     # Cost function
@@ -36,12 +37,9 @@ def minimize(
     if numpy.ndim(bounds) != 2:
         raise ValueError()
 
-    ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
-
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != ndim:
+        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != len(bounds):
             raise ValueError()
 
     # Population size
@@ -71,24 +69,36 @@ def minimize(
     c1 = cognitivity
     c2 = sociability
     gamma = competitivity
-    sync = updating == "deferred"
-
-    # Swarm maximum radius
-    if gamma:
-        delta = numpy.log(1.0 + 0.003 * popsize) / numpy.max((0.2, numpy.log(0.01 * maxiter)))
-
-    # Constraints
-    cons = _constraints_map[constraints](lower, upper, sync)
 
     # Synchronize
-    pso_iter = pso_sync if sync else pso_async
-
-    # Parallel
-    fun = parallelize(fun, args, sync, workers)
+    sync = updating == "deferred"
+    sync = sync or workers not in {0, 1}
+    sync = sync or backend == "mpi"
 
     # Seed
     if seed is not None:
         numpy.random.seed(seed)
+
+    # Run in serial or parallel
+    optargs = (bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync, xtol, ftol, return_all)
+    res = run(cpso, fun, args, sync, workers, backend, optargs)
+
+    return res
+
+
+def cpso(fun, bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync, xtol, ftol, return_all):
+    ndim = len(bounds)
+    lower, upper = numpy.transpose(bounds)
+
+    # Constraints
+    cons = _constraints_map[constraints](lower, upper, sync)
+
+    # Iteration
+    pso_iter = pso_sync if sync else pso_async
+
+    # Swarm maximum radius
+    if gamma:
+        delta = numpy.log(1.0 + 0.003 * popsize) / numpy.max((0.2, numpy.log(0.01 * maxiter)))
 
     # Initial population
     X = (

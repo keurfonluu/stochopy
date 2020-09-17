@@ -2,7 +2,7 @@ import numpy
 
 from ..cmaes._cmaes import converge
 from ..cmaes._constraints import _constraints_map
-from .._common import messages, parallelize
+from .._common import messages, run
 from .._helpers import register, OptimizeResult
 
 __all__ = [
@@ -25,6 +25,7 @@ def minimize(
     ftol=1.0e-8,
     constraints=None,
     workers=1,
+    backend="joblib",
     return_all=False,
 ):
     # Cost function
@@ -35,21 +36,12 @@ def minimize(
     if numpy.ndim(bounds) != 2:
         raise ValueError()
 
-    ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
-
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != ndim:
+        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != len(bounds):
             raise ValueError()
 
-    # Standardize and unstandardize
-    xm = 0.5 * (upper + lower)
-    xstd = 0.5 * (upper - lower)
-    standardize = lambda x: (x - xm) / xstd
-    unstandardize = lambda x: x * xstd + xm
-
-    # CMA-ES parameters
+    # VDCMA parameters
     if sigma <= 0.0:
         raise ValueError()
 
@@ -57,20 +49,34 @@ def minimize(
         raise ValueError()
 
     if xmean0 is not None:
-        if numpy.ndim(xmean0) != 1 or len(xmean0) != ndim:
+        if numpy.ndim(xmean0) != 1 or len(xmean0) != len(bounds):
             raise ValueError()
-
-    # Constraints
-    if constraints is not None:
-        cons = _constraints_map[constraints]
-
-    # Parallel
-    funstd = parallelize(fun, args, True, workers)
-    fun = lambda x: funstd(unstandardize(x))
 
     # Seed
     if seed is not None:
         numpy.random.seed(seed)
+
+    # Run in serial or parallel
+    optargs = (bounds, x0, maxiter, popsize, sigma, muperc, xmean0, constraints, xtol, ftol, return_all)
+    res = run(vdcma, fun, args, True, workers, backend, optargs)
+
+    return res
+
+def vdcma(funstd, bounds, x0, maxiter, popsize, sigma, muperc, xmean0, constraints, xtol, ftol, return_all):
+    ndim = len(bounds)
+    lower, upper = numpy.transpose(bounds)
+
+    # Standardize and unstandardize
+    xm = 0.5 * (upper + lower)
+    xstd = 0.5 * (upper - lower)
+    standardize = lambda x: (x - xm) / xstd
+    unstandardize = lambda x: x * xstd + xm
+
+    fun = lambda x: funstd(unstandardize(x))
+
+    # Constraints
+    if constraints is not None:
+        cons = _constraints_map[constraints]
 
     # Initial mean
     xmean = (

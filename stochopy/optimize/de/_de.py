@@ -2,7 +2,7 @@ import numpy
 
 from ._constraints import _constraints_map
 from ._strategy import _strategy_map
-from .._common import messages, lhs, parallelize, selection_sync, selection_async
+from .._common import messages, lhs, run, selection_sync, selection_async
 from .._helpers import register, OptimizeResult
 
 __all__ = [
@@ -26,6 +26,7 @@ def minimize(
     constraints=None,
     updating="deferred",
     workers=1,
+    backend="joblib",
     return_all=False,
 ):
     # Cost function
@@ -36,12 +37,9 @@ def minimize(
     if numpy.ndim(bounds) != 2:
         raise ValueError()
 
-    ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
-
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != ndim:
+        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != len(bounds):
             raise ValueError()
 
     # Population size
@@ -64,20 +62,32 @@ def minimize(
     F = mutation
     CR = recombination
     mut = _strategy_map[strategy]
-    sync = updating == "deferred"
-
-    # Constraints
-    cons = _constraints_map[constraints](lower, upper)
 
     # Synchronize
-    de_iter = de_sync if sync else de_async
-
-    # Parallel
-    fun = parallelize(fun, args, sync, workers)
+    sync = updating == "deferred"
+    sync = sync or workers not in {0, 1}
+    sync = sync or backend == "mpi"
 
     # Seed
     if seed is not None:
         numpy.random.seed(seed)
+
+    # Run in serial or parallel
+    optargs = (bounds, x0, maxiter, popsize, F, CR, mut, constraints, sync, xtol, ftol, return_all)
+    res = run(de, fun, args, sync, workers, backend, optargs)
+
+    return res
+
+
+def de(fun, bounds, x0, maxiter, popsize, F, CR, mut, constraints, sync, xtol, ftol, return_all):
+    ndim = len(bounds)
+    lower, upper = numpy.transpose(bounds)
+
+    # Constraints
+    cons = _constraints_map[constraints](lower, upper)
+
+    # Iteration
+    de_iter = de_sync if sync else de_async
 
     # Initial population
     X = (
@@ -89,6 +99,7 @@ def minimize(
 
     # Evaluate initial population
     pfit = fun(X) if sync else numpy.array([fun(xx) for xx in X])
+    # pfit = numpy.array([fun(xx) for xx in X])
     pbestfit = numpy.array(pfit)
 
     # Initial best solution

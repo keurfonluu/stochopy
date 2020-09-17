@@ -1,3 +1,5 @@
+from joblib import delayed, Parallel
+
 import numpy
 
 
@@ -16,24 +18,43 @@ messages = {
 }
 
 
-def parallelize(fun, args, sync, workers):
-    parallel = workers not in {0, 1}
+def run(optimizer, fun, args, sync, workers, backend, optargs=()):
+    if workers not in {0, 1} and backend == "joblib":
+        with Parallel(n_jobs=workers, prefer="threads") as parallel:
+            fun = wrapfun(fun, args, sync, backend, parallel)
+            res = optimizer(fun, *optargs)
 
+    else:
+        parallel = backend == "mpi"
+        fun = wrapfun(fun, args, sync, backend, parallel)
+        res = optimizer(fun, *optargs)
+
+    return res
+
+
+def wrapfun(fun, args, sync, backend, parallel):
     if sync:
         if parallel:
-            raise NotImplementedError()
+            if backend == "joblib":
+                fun = delayed(fun)
+
+                def wrapper(x):
+                    f = parallel(fun(xx, *args) for xx in x)
+                    return numpy.array(f)
+
+            elif backend == "mpi":
+                raise NotImplementedError()
+
+            else:
+                raise ValueError(f"unknown backend '{backend}'")
 
         else:
             def wrapper(x):
                 return numpy.array([fun(xx, *args) for xx in x])
 
     else:
-        if parallel:
-            raise ValueError("cannot perform asynchronous optimization in parallel")
-
-        else:
-            def wrapper(x):
-                return fun(x, *args)
+        def wrapper(x):
+            return fun(x, *args)
 
     return wrapper
 
