@@ -110,7 +110,7 @@ def cpso(fun, bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync,
     pbest = X.copy()
 
     # Evaluate initial population
-    pfit = fun(X) if sync else numpy.array([fun(xx) for xx in X])
+    pfit = fun(X)
     pbestfit = pfit.copy()
 
     # Initial best solution

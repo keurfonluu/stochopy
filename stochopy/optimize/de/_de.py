@@ -98,7 +98,7 @@ def de(fun, bounds, x0, maxiter, popsize, F, CR, mut, constraints, sync, xtol, f
     U = numpy.empty((popsize, ndim))
 
     # Evaluate initial population
-    pfit = fun(X) if sync else numpy.array([fun(xx) for xx in X])
+    pfit = fun(X)
     pbestfit = pfit.copy()
 
     # Initial best solution

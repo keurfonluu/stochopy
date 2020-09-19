@@ -84,7 +84,10 @@ def wrapfun(fun, args, sync, backend, parallel):
 
     else:
         def wrapper(x):
-            return fun(x, *args)
+            if x.ndim == 2:
+                return numpy.array([fun(xx, *args) for xx in x])
+            else:
+                return fun(x, *args)
 
     return wrapper
 
