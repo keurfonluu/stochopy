@@ -1,8 +1,8 @@
 import numpy
 
+from .._common import lhs, messages, run, selection_async, selection_sync
+from .._helpers import OptimizeResult, register
 from ._constraints import _constraints_map
-from .._common import messages, lhs, run, selection_sync, selection_async
-from .._helpers import register, OptimizeResult
 
 __all__ = [
     "minimize",
@@ -80,13 +80,42 @@ def minimize(
         numpy.random.seed(seed)
 
     # Run in serial or parallel
-    optargs = (bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync, xtol, ftol, return_all)
+    optargs = (
+        bounds,
+        x0,
+        maxiter,
+        popsize,
+        w,
+        c1,
+        c2,
+        gamma,
+        constraints,
+        sync,
+        xtol,
+        ftol,
+        return_all,
+    )
     res = run(cpso, fun, args, sync, workers, backend, optargs)
 
     return res
 
 
-def cpso(fun, bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync, xtol, ftol, return_all):
+def cpso(
+    fun,
+    bounds,
+    x0,
+    maxiter,
+    popsize,
+    w,
+    c1,
+    c2,
+    gamma,
+    constraints,
+    sync,
+    xtol,
+    ftol,
+    return_all,
+):
     ndim = len(bounds)
     lower, upper = numpy.transpose(bounds)
 
@@ -98,14 +127,12 @@ def cpso(fun, bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync,
 
     # Swarm maximum radius
     if gamma:
-        delta = numpy.log(1.0 + 0.003 * popsize) / numpy.max((0.2, numpy.log(0.01 * maxiter)))
+        delta = numpy.log(1.0 + 0.003 * popsize) / numpy.max(
+            (0.2, numpy.log(0.01 * maxiter))
+        )
 
     # Initial population
-    X = (
-        x0
-        if x0 is not None
-        else lhs(popsize, ndim, bounds)
-    )
+    X = x0 if x0 is not None else lhs(popsize, ndim, bounds)
     V = numpy.zeros((popsize, ndim))
     pbest = X.copy()
 
@@ -133,7 +160,26 @@ def cpso(fun, bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync,
 
         r1 = numpy.random.rand(popsize, ndim)
         r2 = numpy.random.rand(popsize, ndim)
-        X, V, pbest, gbest, pbestfit, gfit, pfit, status = pso_iter(it, X, V, pbest, gbest, pbestfit, gfit, pfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons)
+        X, V, pbest, gbest, pbestfit, gfit, pfit, status = pso_iter(
+            it,
+            X,
+            V,
+            pbest,
+            gbest,
+            pbestfit,
+            gfit,
+            pfit,
+            w,
+            c1,
+            c2,
+            r1,
+            r2,
+            maxiter,
+            xtol,
+            ftol,
+            fun,
+            cons,
+        )
 
         if return_all:
             xall[it - 1] = X.copy()
@@ -142,7 +188,9 @@ def cpso(fun, bounds, x0, maxiter, popsize, w, c1, c2, gamma, constraints, sync,
         converged = status is not None
 
         if not converged and gamma:
-            X, V, pbest, pbestfit = restart(it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxiter)
+            X, V, pbest, pbestfit = restart(
+                it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxiter
+            )
 
     res = OptimizeResult(
         x=gbest,
@@ -167,24 +215,68 @@ def mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons):
     return X, V
 
 
-def pso_sync(it, X, V, pbest, gbest, pbestfit, gfit, pfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons):
+def pso_sync(
+    it,
+    X,
+    V,
+    pbest,
+    gbest,
+    pbestfit,
+    gfit,
+    pfit,
+    w,
+    c1,
+    c2,
+    r1,
+    r2,
+    maxiter,
+    xtol,
+    ftol,
+    fun,
+    cons,
+):
     # Mutation
     X, V = mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons)
 
     # Selection
-    gbest, gfit, pfit, status = selection_sync(it, X, gbest, pbest, pbestfit, maxiter, xtol, ftol, fun)
+    gbest, gfit, pfit, status = selection_sync(
+        it, X, gbest, pbest, pbestfit, maxiter, xtol, ftol, fun
+    )
 
     return X, V, pbest, gbest, pbestfit, gfit, pfit, status
 
 
-def pso_async(it, X, V, pbest, gbest, pbestfit, gfit, pfit, w, c1, c2, r1, r2, maxiter, xtol, ftol, fun, cons):
+def pso_async(
+    it,
+    X,
+    V,
+    pbest,
+    gbest,
+    pbestfit,
+    gfit,
+    pfit,
+    w,
+    c1,
+    c2,
+    r1,
+    r2,
+    maxiter,
+    xtol,
+    ftol,
+    fun,
+    cons,
+):
     for i in range(len(X)):
         # Mutation
-        X[i], V[i] = mutation(X[i], V[i], pbest[i], gbest, w, c1, c2, r1[i], r2[i], cons)
+        X[i], V[i] = mutation(
+            X[i], V[i], pbest[i], gbest, w, c1, c2, r1[i], r2[i], cons
+        )
 
         # Selection
-        gbest, gfit, pfit[i], status = selection_async(it, X, gbest, gfit, pbest, pbestfit, maxiter, xtol, ftol, fun, i)
-                    
+        gbest, gfit, pfit[i], status = selection_async(
+            it, X, gbest, gfit, pbest, pbestfit, maxiter, xtol, ftol, fun, i
+        )
+
     # Stop if maximum iteration is reached
     if status is None and it >= maxiter:
         status = -1
@@ -196,19 +288,19 @@ def restart(it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxite
     popsize, ndim = X.shape
 
     # Evaluate swarm size
-    swarm_radius = numpy.max([
-        numpy.linalg.norm(X[i] - gbest) for i in range(popsize)
-    ])
+    swarm_radius = numpy.max([numpy.linalg.norm(X[i] - gbest) for i in range(popsize)])
     swarm_radius /= numpy.sqrt(4.0 * ndim)
 
     # Restart particles if swarm size is lower than threshold
     if swarm_radius < delta:
         inorm = it / maxiter
-        nw = int((popsize - 1.0) / (1.0 + numpy.exp(1.0 / 0.09 * (inorm - gamma + 0.5))))
-        
+        nw = int(
+            (popsize - 1.0) / (1.0 + numpy.exp(1.0 / 0.09 * (inorm - gamma + 0.5)))
+        )
+
         # Reset positions, velocities and personal bests
         if nw > 0:
-            idx = pbestfit.argsort()[:-nw - 1:-1]
+            idx = pbestfit.argsort()[: -nw - 1 : -1]
             V[idx] = numpy.zeros((nw, ndim))
             X[idx] = numpy.random.uniform(lower, upper, (nw, ndim))
             pbest[idx] = X[idx].copy()

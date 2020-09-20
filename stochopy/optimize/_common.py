@@ -1,7 +1,5 @@
-from joblib import delayed, Parallel
-
 import numpy
-
+from joblib import Parallel, delayed
 
 prefer = {
     "loky": "processes",
@@ -54,7 +52,9 @@ def wrapfun(fun, args, sync, backend, parallel):
                 try:
                     from mpi4py import MPI
                 except ImportError:
-                    raise ImportError("parallelization using MPI requires mpi4py to be installed")
+                    raise ImportError(
+                        "parallelization using MPI requires mpi4py to be installed"
+                    )
 
                 mpi_comm = MPI.COMM_WORLD
                 mpi_rank = mpi_comm.Get_rank()
@@ -79,10 +79,12 @@ def wrapfun(fun, args, sync, backend, parallel):
                 raise ValueError(f"unknown backend '{backend}'")
 
         else:
+
             def wrapper(x):
                 return numpy.array([fun(xx, *args) for xx in x])
 
     else:
+
         def wrapper(x):
             if x.ndim == 2:
                 return numpy.array([fun(xx, *args) for xx in x])
@@ -95,9 +97,9 @@ def wrapfun(fun, args, sync, backend, parallel):
 def lhs(popsize, ndim, bounds=None):
     x = numpy.random.uniform(size=(popsize, ndim)) / popsize
     x += numpy.linspace(-1.0, 1.0, popsize, endpoint=False)[:, None]
-    pop = numpy.transpose([
-        x[numpy.random.permutation(popsize), i] for i in range(ndim)
-    ])
+    pop = numpy.transpose(
+        [x[numpy.random.permutation(popsize), i] for i in range(ndim)]
+    )
 
     if bounds is not None:
         lower, upper = numpy.transpose(bounds)
@@ -124,7 +126,7 @@ def selection_sync(it, cand, xbest, x, xfun, maxiter, xtol, ftol, fun):
         xbest = x[idx].copy()
         xbestfun = xfun[idx]
         status = 0
-        
+
     # Stop if best solution value is less than ftol
     elif xfun[idx] <= ftol:
         xbest = x[idx].copy()
@@ -154,7 +156,7 @@ def selection_async(it, cand, xbest, xbestfun, x, xfun, maxiter, xtol, ftol, fun
     if candfun <= xfun[i]:
         x[i] = cand[i].copy()
         xfun[i] = candfun
-        
+
         # Update best individual
         if candfun <= xbestfun:
             # Stop if best solution changes less than xtol
@@ -164,7 +166,7 @@ def selection_async(it, cand, xbest, xbestfun, x, xfun, maxiter, xtol, ftol, fun
                 xbest = cand[i].copy()
                 xbestfun = candfun
                 status = 0
-                
+
             # Stop if best solution value is less than ftol
             elif candfun <= ftol:
                 xbest = cand[i].copy()

@@ -1,7 +1,7 @@
 import numpy
 
 from .._common import in_search_space
-from .._helpers import register, SampleResult
+from .._helpers import SampleResult, register
 
 __all__ = [
     "sample",
@@ -78,9 +78,9 @@ def sample(
         p = numpy.random.randn(ndim)  # Random momentum
         q0 = q.copy()
         p0 = p.copy()
-        
+
         p -= 0.5 * stepsize * jac(q)  # First half momentum step
-        q += stepsize * p             # First full position step
+        q += stepsize * p  # First full position step
         for _ in range(nleap):
             p -= stepsize * jac(q)  # Momentum
             q += stepsize * p  # Position
@@ -122,7 +122,7 @@ def sample(
 def count(fun):
     global nfev
     nfev = 0
-    
+
     def wrapper(*args, **kwargs):
         global nfev
         nfev += 1

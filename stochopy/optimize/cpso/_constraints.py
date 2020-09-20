@@ -30,16 +30,20 @@ def Shrink(lower, upper, sync):
             return 1.0
 
     if sync:
+
         def cons(X, V):
             Xcand = X + V
             maskl = Xcand < lower
             masku = Xcand > upper
-            beta = numpy.array([shrink(x, v, ml, mu) for x, v, ml, mu in zip(X, V, maskl, masku)])
+            beta = numpy.array(
+                [shrink(x, v, ml, mu) for x, v, ml, mu in zip(X, V, maskl, masku)]
+            )
             V *= beta[:, None]
 
             return X + V, V
 
     else:
+
         def cons(X, V):
             Xcand = X + V
             maskl = Xcand < lower

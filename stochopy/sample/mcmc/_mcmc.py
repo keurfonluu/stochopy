@@ -1,7 +1,7 @@
 import numpy
 
 from .._common import in_search_space
-from .._helpers import register, SampleResult
+from .._helpers import SampleResult, register
 
 __all__ = [
     "sample",
@@ -43,7 +43,7 @@ def sample(
         raise ValueError()
 
     stepsize *= 0.5 * (upper - lower)
-    
+
     # Number of dimensions to perturb per iteration
     if not 0.0 <= perc <= 1.0:
         raise ValueError()
@@ -53,7 +53,7 @@ def sample(
     # Seed
     if seed is not None:
         numpy.random.seed(seed)
-    
+
     # Initialize arrays
     xall = numpy.empty((maxiter, ndim))
     funall = numpy.empty(maxiter)

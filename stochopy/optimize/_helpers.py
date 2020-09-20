@@ -18,11 +18,5 @@ def register(name, minimize):
 
 def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
     options = options if options else {}
-    
-    return _optimizer_map[method](
-        fun=fun,
-        bounds=bounds,
-        x0=x0,
-        args=args,
-        **options,
-    )
+
+    return _optimizer_map[method](fun=fun, bounds=bounds, x0=x0, args=args, **options)
