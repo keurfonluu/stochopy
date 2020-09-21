@@ -266,7 +266,9 @@ def pso_async(
     fun,
     cons,
 ):
-    for i in range(len(X)):
+    popsize = len(X)
+
+    for i in range(popsize):
         # Mutation
         X[i], V[i] = mutation(
             X[i], V[i], pbest[i], gbest, w, c1, c2, r1[i], r2[i], cons
