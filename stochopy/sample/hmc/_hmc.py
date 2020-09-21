@@ -108,7 +108,7 @@ def sample(
     res = SampleResult(
         x=xall[idx],
         fun=funall[idx],
-        nfev=nfev,
+        nfev=fun.nfev,
         nit=maxiter,
         accept_ratio=n_accepted / maxiter,
     )
@@ -120,14 +120,13 @@ def sample(
 
 
 def count(fun):
-    global nfev
-    nfev = 0
 
     def wrapper(*args, **kwargs):
-        global nfev
-        nfev += 1
+        wrapper.nfev += 1
 
         return fun(*args, **kwargs)
+
+    wrapper.nfev = 0
 
     return wrapper
 
