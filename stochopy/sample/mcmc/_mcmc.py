@@ -20,6 +20,44 @@ def sample(
     constraints=None,
     return_all=False,
 ):
+    """
+    Sample the variable space using the Metropolis-Hastings algorithm.
+    
+    Parameters
+    ----------
+    fun : callable
+        The objective function to be sampled. Must be in the form `f(x, *args)`, where `x` is the argument in the form of a 1-D array and args is a tuple of any additional fixed parameters needed to completely specify the function.
+    bounds : array_like
+        Bounds for variables. `(min, max)` pairs for each element in `x`, defining the finite lower and upper bounds for the sampling argument of `fun`. It is required to have `len(bounds) == len(x)`. `len(bounds)` is used to determine the number of parameters in `x`.
+    x0 : array_like or None, optional, default None
+        Initial sample. Array of real elements of size (`ndim`,), where `ndim` is the number of independent variables.
+    args : tuple, optional, default None
+        Extra arguments passed to the objective function.
+    maxiter : int, optional, default 100
+        Total number of samples to generate.
+    stepsize : scalar or array_like, optional, default 0.1
+        Standard deviation of Gaussian perturbation (as a fraction of feasible space defined by `bounds`).
+    perc : scalar, optional, default 1.0
+        Number of dimensions to perturb at each iteration (as a fraction of total number of variables).
+    seed : int or None, optional, default None
+        Seed for random number generator.
+    constraints : str or None, optional, default None
+        Constraints definition:
+         - None: no constraint
+         - 'Reject': infeasible solutions are always rejected
+    return_all : bool, optional, default False
+        Set to True to return an array with shape (`maxiter`, `ndim`) of all the samples.
+        
+    Returns
+    -------
+    SampleResult
+        The sampling result represented as a SampleResult object. Important attributes are:
+        - `x`: the best sample array
+        - `fun`: the best sample function value
+        - `xall`: the samples array
+        - 'funall`: the samples' function value array
+    
+    """
     # Cost function
     if not hasattr(fun, "__call__"):
         raise TypeError()
