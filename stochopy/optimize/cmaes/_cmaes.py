@@ -45,7 +45,7 @@ def minimize(
     popsize : int, optional, default 10
         Total population size.
     sigma : scalar or array_like, optional, default 0.1
-        Initial standard deviation.
+        Initial standard deviation (as a fraction of feasible space defined by `bounds`).
     muperc : scalar, optional, default 0.5
         Number of parents (as a fraction of total population size).
     seed : int or None, optional, default None

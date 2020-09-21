@@ -37,7 +37,7 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
          - 'de'
          - 'pso'
          - 'vdcma'
-    options : dict, optional, default None
+    options : dict or None, optional, default None
         A dictionary of solver options. All methods accept the following generic options:
 
         ..
@@ -48,6 +48,7 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
                 Seed for random number generator.
             return_all : bool
                 Set to True to return an array of all the solutions at each iteration.
+
 
     Returns
     -------
