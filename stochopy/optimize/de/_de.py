@@ -170,6 +170,7 @@ def de(
     ftol,
     return_all,
 ):
+    """Optimize with DE."""
     ndim = len(bounds)
     lower, upper = numpy.transpose(bounds)
 
@@ -248,10 +249,12 @@ def de(
 
 
 def delete_shuffle_sync(popsize):
+    """Delete current solution from population for mutation (synchronous)."""
     return numpy.transpose([delete_shuffle_async(i, popsize) for i in range(popsize)])
 
 
 def delete_shuffle_async(i, popsize):
+    """Delete current solution from population for mutation (asynchronous)."""
     return numpy.random.permutation(numpy.delete(numpy.arange(popsize), i))
 
 
@@ -273,6 +276,7 @@ def de_sync(
     mut,
     cons,
 ):
+    """Synchronous DE."""
     popsize, ndim = X.shape
 
     # Mutation
@@ -312,6 +316,7 @@ def de_async(
     mut,
     cons,
 ):
+    """Asynchronous DE."""
     popsize, ndim = X.shape
 
     for i in range(popsize):

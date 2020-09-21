@@ -23,6 +23,7 @@ messages = {
 
 
 def run(optimizer, fun, args, sync, workers, backend, optargs=()):
+    """Run an optimizer with the selected backend."""
     backend = backend if backend else "threading"
 
     if backend in prefer and workers not in {0, 1}:
@@ -39,6 +40,7 @@ def run(optimizer, fun, args, sync, workers, backend, optargs=()):
 
 
 def wrapfun(fun, args, sync, backend, parallel):
+    """Wrap an objective function."""
     if sync:
         if parallel:
             if backend in prefer:
@@ -95,6 +97,7 @@ def wrapfun(fun, args, sync, backend, parallel):
 
 
 def lhs(popsize, ndim, bounds=None):
+    """Latin Hypercube sampling."""
     x = numpy.random.uniform(size=(popsize, ndim)) / popsize
     x += numpy.linspace(-1.0, 1.0, popsize, endpoint=False)[:, None]
     pop = numpy.transpose(
@@ -110,6 +113,7 @@ def lhs(popsize, ndim, bounds=None):
 
 
 def selection_sync(it, cand, xbest, x, xfun, maxiter, xtol, ftol, fun):
+    """Synchronous selection."""
     # Selection
     candfun = fun(cand)
     idx = candfun < xfun
@@ -149,6 +153,7 @@ def selection_sync(it, cand, xbest, x, xfun, maxiter, xtol, ftol, fun):
 
 
 def selection_async(it, cand, xbest, xbestfun, x, xfun, maxiter, xtol, ftol, fun, i):
+    """Asynchronous selection."""
     # Selection
     candfun = fun(cand[i])
 

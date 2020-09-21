@@ -144,6 +144,7 @@ def vdcma(
     ftol,
     return_all,
 ):
+    """Optimize with VD-CMA."""
     ndim = len(bounds)
     lower, upper = numpy.transpose(bounds)
 
@@ -393,6 +394,7 @@ def vdcma(
 
 
 def pvec_and_qvec(vn, norm_v2, y, weights=None):
+    """Return pvec and qvec."""
     y_vn = numpy.dot(y, vn)
     if weights is None:
         pvec = y ** 2 - norm_v2 / (1.0 + norm_v2) * (y_vn * y * vn) - 1.0
@@ -410,6 +412,7 @@ def pvec_and_qvec(vn, norm_v2, y, weights=None):
 
 
 def ngv_ngd(dvec, vn, vnn, norm_v, norm_v2, alpha, avec, bsca, invavnn, pvec, qvec):
+    """Return ngv and ngd."""
     rvec = pvec - alpha / (1.0 + norm_v2) * (
         (2.0 + norm_v2) * qvec * vn - norm_v2 * numpy.dot(vn, qvec) * vnn
     )

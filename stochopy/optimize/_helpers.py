@@ -9,10 +9,12 @@ _optimizer_map = {}
 
 
 class OptimizeResult(BaseResult):
+    """Represent the optimization result."""
     pass
 
 
 def register(name, minimize):
+    """Register a new optimizer."""
     _optimizer_map[name] = minimize
 
 

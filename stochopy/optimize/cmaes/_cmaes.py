@@ -143,6 +143,7 @@ def cmaes(
     ftol,
     return_all,
 ):
+    """Optimize with CMA-ES."""
     ndim = len(bounds)
     lower, upper = numpy.transpose(bounds)
 
@@ -346,6 +347,7 @@ def converge(
     B=None,
     D=None,
 ):
+    """Check convergence status at the end of an iteration."""
     status = None
     i = int(numpy.floor(numpy.mod(it, ndim)))
     sqdiagC = numpy.sqrt(diagC)

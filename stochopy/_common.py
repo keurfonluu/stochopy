@@ -1,5 +1,7 @@
 class BaseResult(dict):
+    """Represents the optimization or sampling result."""
     def __getattr__(self, name):
+        """Define dict.attr as an alias of dict[attr]."""
         try:
             return self[name]
         except KeyError:
@@ -9,6 +11,7 @@ class BaseResult(dict):
     __delattr__ = dict.__delitem__
 
     def __repr__(self):
+        """Pretty result."""
         if self.keys():
             m = max(map(len, list(self.keys()))) + 1
             return "\n".join(
@@ -22,4 +25,5 @@ class BaseResult(dict):
             return self.__class__.__name__ + "()"
 
     def __dir__(self):
+        """Return a list of attributes."""
         return list(self.keys())

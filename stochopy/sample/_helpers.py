@@ -9,10 +9,12 @@ _sampler_map = {}
 
 
 class SampleResult(BaseResult):
+    """Represent the sampling result."""
     pass
 
 
 def register(name, sample):
+    """Register a new sampler."""
     _sampler_map[name] = sample
 
 

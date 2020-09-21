@@ -169,6 +169,7 @@ def sample(
 
 
 def count(fun):
+    """Wrap objective function to count the number of function calls."""
 
     def wrapper(*args, **kwargs):
         wrapper.nfev += 1
@@ -181,6 +182,7 @@ def count(fun):
 
 
 def numerical_gradient(x, fun, args, finite_diff_abs_step):
+    """Approximate gradient vector."""
     ndim = len(x)
     x1 = x.copy()
     x2 = x.copy()

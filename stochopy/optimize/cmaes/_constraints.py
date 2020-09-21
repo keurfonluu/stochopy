@@ -16,6 +16,12 @@ def Penalize(
     iniphase,
     fun,
 ):
+    """
+    Penalize function values of infeasible solutions.
+    
+    Box constraint handling by adding a penalty term that quantifies the distance of the parameters from the feasible space.
+    
+    """
     popsize, ndim = arx.shape
     ones = numpy.ones(ndim)
 

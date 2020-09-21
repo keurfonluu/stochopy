@@ -179,6 +179,7 @@ def cpso(
     ftol,
     return_all,
 ):
+    """Optimize with CPSO."""
     ndim = len(bounds)
     lower, upper = numpy.transpose(bounds)
 
@@ -272,6 +273,7 @@ def cpso(
 
 
 def mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons):
+    """Update position and velocity vectors."""
     V = w * V + c1 * r1 * (pbest - X) + c2 * r2 * (gbest - X)
     X, V = cons(X, V)
 
@@ -298,6 +300,7 @@ def pso_sync(
     fun,
     cons,
 ):
+    """Synchronous PSO."""
     # Mutation
     X, V = mutation(X, V, pbest, gbest, w, c1, c2, r1, r2, cons)
 
@@ -329,6 +332,7 @@ def pso_async(
     fun,
     cons,
 ):
+    """Asynchronous PSO."""
     popsize = len(X)
 
     for i in range(popsize):
@@ -350,6 +354,7 @@ def pso_async(
 
 
 def restart(it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxiter):
+    """Competitive PSO algorithm."""
     popsize, ndim = X.shape
 
     # Evaluate swarm size
