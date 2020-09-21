@@ -10,6 +10,7 @@ _optimizer_map = {}
 
 class OptimizeResult(BaseResult):
     """Represent the optimization result."""
+
     pass
 
 

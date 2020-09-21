@@ -30,7 +30,7 @@ def minimize(
 ):
     """
     Minimize an objective function using VD-CMA.
-    
+
     Parameters
     ----------
     fun : callable
@@ -68,7 +68,7 @@ def minimize(
          - 'mpi': use MPI (uses :mod:`mpi4py`)
     return_all : bool, optional, default False
         Set to True to return an array with shape (`nit`, `popsize`, `ndim`) of all the solutions at each iteration.
-        
+
     Returns
     -------
     OptimizeResult
@@ -77,11 +77,11 @@ def minimize(
         - `fun`: the solution function value
         - `success`: a Boolean flag indicating if the optimizer exited successfully
         - `message`: a string which describes the cause of the termination
-    
+
     References
     ----------
     .. [1] Y. Akimoto, A. Auger and N. Hansen, *Comparison-Based Natural Gradient Optimization in High Dimension*, Proceedings of the 2014 conference on Genetic and evolutionary computation, 2014, 373-380
-    
+
     """
     # Cost function
     if not hasattr(fun, "__call__"):

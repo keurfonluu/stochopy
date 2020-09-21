@@ -10,6 +10,7 @@ _sampler_map = {}
 
 class SampleResult(BaseResult):
     """Represent the sampling result."""
+
     pass
 
 

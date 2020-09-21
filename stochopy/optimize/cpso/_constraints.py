@@ -3,7 +3,7 @@ import numpy
 
 def NoConstraint(lower, upper, sync):
     """No constraint."""
-    
+
     def cons(X, V):
         return X + V, V
 
@@ -14,8 +14,8 @@ def Shrink(lower, upper, sync):
     """
     Shrinking approach.
 
-    Velocity vector amplitude is shrinked for solutions that are in the infeasible space.
-    This approach preserves the trajectory of the particles.
+    Velocity vector amplitude is shrinked for solutions that are in the infeasible
+    space. This approach preserves the trajectory of the particles.
 
     """
 

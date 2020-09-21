@@ -11,7 +11,5 @@ def test_mcmc(options, xref):
 
 @pytest.mark.parametrize("options, xref", [({}, [-1.28470918, 4.6153145])])
 def test_hmc(options, xref):
-    options.update(
-        {"nleap": 10, "stepsize": 0.1}
-    )
+    options.update({"nleap": 10, "stepsize": 0.1})
     helpers.sample("hmc", options, xref)

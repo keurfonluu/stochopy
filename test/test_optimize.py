@@ -13,9 +13,7 @@ import helpers
     ],
 )
 def test_cmaes(options, xref):
-    options.update(
-        {"sigma": 0.1, "muperc": 0.5}
-    )
+    options.update({"sigma": 0.1, "muperc": 0.5})
     helpers.optimize_parallel("cmaes", options, xref)
 
 
@@ -81,9 +79,7 @@ def test_cpso(options, xref):
     ],
 )
 def test_de(options, xref):
-    options.update(
-        {"recombination": 0.1, "mutation": 0.5}
-    )
+    options.update({"recombination": 0.1, "mutation": 0.5})
     helpers.optimize_parallel("de", options, xref)
 
 
@@ -109,9 +105,7 @@ def test_de(options, xref):
     ],
 )
 def test_pso(options, xref):
-    options.update(
-        {"cognitivity": 1.49618, "sociability": 1.49618}
-    )
+    options.update({"cognitivity": 1.49618, "sociability": 1.49618})
     helpers.optimize_parallel("pso", options, xref)
 
 
@@ -125,7 +119,5 @@ def test_pso(options, xref):
     ],
 )
 def test_vdcma(options, xref):
-    options.update(
-        {"sigma": 0.1, "muperc": 0.5}
-    )
+    options.update({"sigma": 0.1, "muperc": 0.5})
     helpers.optimize_parallel("vdcma", options, xref)

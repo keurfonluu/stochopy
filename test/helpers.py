@@ -11,9 +11,7 @@ def rosenbrock():
 
 
 def optimize(method, options, xref):
-    options.update(
-        {"maxiter": 128, "popsize": 8, "seed": 42, "return_all": True}
-    )
+    options.update({"maxiter": 128, "popsize": 8, "seed": 42, "return_all": True})
     fun, bounds = rosenbrock()
     x = stochopy.optimize.minimize(fun, bounds, options=options, method=method)
 
@@ -30,9 +28,7 @@ def optimize_parallel(method, options, xref):
     # Parallel
     if "updating" in options and options["updating"] == "deferred":
         for backend in ["threading", "mpi"]:
-            options.update(
-                {"workers": 2, "backend": backend}
-            )
+            options.update({"workers": 2, "backend": backend})
             optimize(method, options, xref)
 
 

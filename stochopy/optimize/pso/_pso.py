@@ -27,7 +27,7 @@ def minimize(
 ):
     """
     Minimize an objective function using Competitive Particle Swarm Optimization (CPSO).
-    
+
     Parameters
     ----------
     fun : callable
@@ -69,7 +69,7 @@ def minimize(
          - 'mpi': use MPI (uses :mod:`mpi4py`)
     return_all : bool, optional, default False
         Set to True to return an array with shape (nit, popsize, ndim) of all the solutions at each iteration.
-        
+
     Returns
     -------
     OptimizeResult
@@ -78,12 +78,12 @@ def minimize(
         - fun: the solution function value
         - success: a Boolean flag indicating if the optimizer exited successfully
         - message: a string which describes the cause of the termination
-    
+
     References
     ----------
     .. [1] J. Kennedy and R. Eberhart, *Particle swarm optimization*, Proceedings of ICNN'95 - International Conference on Neural Networks, 1995, 4: 1942-1948
     .. [2] F. Van Den Bergh, *An analysis of particle swarm optimizers*, University of Pretoria, 2001
-    
+
     """
     competitivity = None
 

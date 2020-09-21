@@ -24,7 +24,7 @@ def sample(
 ):
     """
     Sample the variable space using the Hamiltonian (Hybrid) Monte-Carlo algorithm.
-    
+
     Parameters
     ----------
     fun : callable
@@ -55,7 +55,7 @@ def sample(
          - 'Reject': infeasible solutions are always rejected
     return_all : bool, optional, default False
         Set to True to return an array with shape (`maxiter`, `ndim`) of all the samples.
-        
+
     Returns
     -------
     SampleResult
@@ -69,7 +69,7 @@ def sample(
     ----------
     .. [1] S. Duane, A. D. Kennedy, B. J. Pendleton and D. Roweth, *Hybrid Monte Carlo*, Physics Letters B., 1987, 195(2): 216-222
     .. [2] N. Radford, *MCMC Using Hamiltonian Dynamics*, Handbook of Markov Chain Monte Carlo, Chapman and Hall/CRC, 2011
-    
+
     """
     # Cost function
     if not hasattr(fun, "__call__"):

@@ -22,7 +22,7 @@ def sample(
 ):
     """
     Sample the variable space using the Metropolis-Hastings algorithm.
-    
+
     Parameters
     ----------
     fun : callable
@@ -47,7 +47,7 @@ def sample(
          - 'Reject': infeasible solutions are always rejected
     return_all : bool, optional, default False
         Set to True to return an array with shape (`maxiter`, `ndim`) of all the samples.
-        
+
     Returns
     -------
     SampleResult
@@ -56,7 +56,7 @@ def sample(
         - `fun`: the best sample function value
         - `xall`: the samples array
         - 'funall`: the samples' function value array
-    
+
     """
     # Cost function
     if not hasattr(fun, "__call__"):

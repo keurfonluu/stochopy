@@ -13,11 +13,11 @@ def NoConstraint(lower, upper):
 def Random(lower, upper):
     """
     Random constraint.
-    
+
     Solutions that are in the infeasible space are resampled.
 
     """
-    
+
     def cons(U):
         return numpy.where(
             numpy.logical_or(U < lower, U > upper),

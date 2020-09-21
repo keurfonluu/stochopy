@@ -31,7 +31,7 @@ def minimize(
 ):
     """
     Minimize an objective function using Differential Evolution (DE).
-    
+
     Parameters
     ----------
     fun : callable
@@ -77,7 +77,7 @@ def minimize(
          - 'mpi': use MPI (uses :mod:`mpi4py`)
     return_all : bool, optional, default False
         Set to True to return an array with shape (nit, popsize, ndim) of all the solutions at each iteration.
-        
+
     Returns
     -------
     OptimizeResult
@@ -86,11 +86,11 @@ def minimize(
         - fun: the solution function value
         - success: a Boolean flag indicating if the optimizer exited successfully
         - message: a string which describes the cause of the termination
-    
+
     References
     ----------
     .. [1] R. Storn and K. Price, *Differential Evolution - A Simple and Efficient Heuristic for global Optimization over Continuous Spaces*, Journal of Global Optimization, 1997, 11(4): 341-359
-    
+
     """
     # Cost function
     if not hasattr(fun, "__call__"):
