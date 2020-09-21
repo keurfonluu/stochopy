@@ -27,6 +27,61 @@ def minimize(
     backend=None,
     return_all=False,
 ):
+    """
+    Minimize an objective function using Covariance Matrix Adaptation - Evolution Strategy (CMA-ES).
+    
+    Parameters
+    ----------
+    fun : callable
+        The objective function to be minimized. Must be in the form `f(x, *args)`, where `x` is the argument in the form of a 1-D array and args is a tuple of any additional fixed parameters needed to completely specify the function
+    bounds : array_like
+        Bounds for variables. `(min, max)` pairs for each element in `x`, defining the finite lower and upper bounds for the optimizing argument of `fun`. It is required to have `len(bounds) == len(x)`. `len(bounds)` is used to determine the number of parameters in `x`.
+    x0 : array_like or None, optional, default None
+        Initial mean. Array of real elements of size (`ndim`,), where `ndim` is the number of independent variables.
+    args : tuple, optional, default None
+        Extra arguments passed to the objective function.
+    maxiter : int, optional, default 100
+        The maximum number of generations over which the entire population is evolved.
+    popsize : int, optional, default 10
+        Total population size.
+    sigma : scalar or array_like, optional, default 0.1
+        Initial standard deviation.
+    muperc : scalar, optional, default 0.5
+        Number of parents (as a fraction of total population size).
+    seed : int or None, optional, default None
+        Seed for random number generator.
+    xtol : scalar, optional, default 1.0e-8
+        Solution tolerance for termination.
+    ftol : scalar, optional, default 1.0e-8
+        Objective function value tolerance for termination.
+    constraints : str or None, optional, default None
+        Constraints definition:
+         - None: no constraint
+         - 'Penalize': infeasible solutions are repaired and their function values are penalized
+    workers : int, optional, default 1
+        The population is subdivided into workers sections and evaluated in parallel (uses :class:`joblib.Parallel`). Supply -1 to use all available CPU cores.
+    backend : str {'loky', 'threading', 'mpi'}, optional, default 'threading'
+        Parallel backend to use when `workers` is not `0` or `1`:
+         - 'loky': disable threading
+         - 'threading': enable threading
+         - 'mpi': use MPI (uses :mod:`mpi4py`)
+    return_all : bool, optional, default False
+        Set to True to return an array with shape (`nit`, `popsize`, `ndim`) of all the solutions at each iteration.
+        
+    Returns
+    -------
+    OptimizeResult
+        The optimization result represented as a OptimizeResult object. Important attributes are:
+        - `x`: the solution array
+        - `fun`: the solution function value
+        - `success`: a Boolean flag indicating if the optimizer exited successfully
+        - `message`: a string which describes the cause of the termination
+    
+    References
+    ----------
+    .. [1] N. Hansen, *The CMA evolution strategy: A tutorial*, Inria, Université Paris-Saclay, LRI, 2011, 102: 1-34
+    
+    """
     # Cost function
     if not hasattr(fun, "__call__"):
         raise TypeError()

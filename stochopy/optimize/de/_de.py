@@ -29,6 +29,69 @@ def minimize(
     backend=None,
     return_all=False,
 ):
+    """
+    Minimize an objective function using Differential Evolution (DE).
+    
+    Parameters
+    ----------
+    fun : callable
+        The objective function to be minimized. Must be in the form `f(x, *args)`, where `x` is the argument in the form of a 1-D array and args is a tuple of any additional fixed parameters needed to completely specify the function
+    bounds : array_like
+        Bounds for variables. `(min, max)` pairs for each element in `x`, defining the finite lower and upper bounds for the optimizing argument of `fun`. It is required to have `len(bounds) == len(x)`. `len(bounds)` is used to determine the number of parameters in `x`.
+    x0 : array_like or None, optional, default None
+        Initial population. Array of real elements with shape (`popsize`, `ndim`), where `ndim` is the number of independent variables. If `x0` is not specified, the population is initialized using Latin Hypercube sampling.
+    args : tuple, optional, default None
+        Extra arguments passed to the objective function.
+    maxiter : int, optional, default 100
+        The maximum number of generations over which the entire population is evolved.
+    popsize : int, optional, default 10
+        Total population size.
+    mutation : scalar, optional, default 0.5
+        The mutation constant. In the literature this is also known as differential weight, being denoted by F. It should be in the range [0, 2]. Increasing the mutation constant increases the search radius, but will slow down convergence.
+    recombination : scalar, optional, default 0.1
+        The recombination constant, should be in the range [0, 1]. In the literature this is also known as the crossover probability, being denoted by CR. Increasing this value allows a larger number of mutants to progress into the next generation, but at the risk of population stability.
+    strategy : str, optional, default 'rand1'
+        The differential evolution strategy to use. Should be one of:
+         - 'rand1bin'
+         - 'rand2bin'
+         - 'best1bin'
+         - 'best2bin'
+    seed : int or None, optional, default None
+        Seed for random number generator.
+    xtol : scalar, optional, default 1.0e-8
+        Solution tolerance for termination.
+    ftol : scalar, optional, default 1.0e-8
+        Objective function value tolerance for termination.
+    constraints : str or None, optional, default None
+        Constraints definition:
+         - None: no constraint
+         - 'Random': infeasible solutions are resampled in the feasible space defined by `bounds`
+    updating : str {'immediate', 'deferred'}, optional, default 'deferred'
+        If `'immediate'`, the best solution vector is continuously updated within a single generation. This can lead to faster convergence as candidate solutions can take advantage of continuous improvements in the best solution. With `'deferred'`, the best solution vector is updated once per generation. Only `'deferred'` is compatible with parallelization, and is overridden when `workers` is not `0` or `1` or `backend == 'mpi'`.
+    workers : int, optional, default 1
+        The population is subdivided into workers sections and evaluated in parallel (uses :class:`joblib.Parallel`). Supply -1 to use all available CPU cores.
+    backend : str {'loky', 'threading', 'mpi'}, optional, default 'threading'
+        Parallel backend to use when `workers` is not `0` or `1`:
+         - 'loky': disable threading
+         - 'threading': enable threading
+         - 'mpi': use MPI (uses :mod:`mpi4py`)
+    return_all : bool, optional, default False
+        Set to True to return an array with shape (nit, popsize, ndim) of all the solutions at each iteration.
+        
+    Returns
+    -------
+    OptimizeResult
+        The optimization result represented as a OptimizeResult object. Important attributes are:
+        - x: the solution array
+        - fun: the solution function value
+        - success: a Boolean flag indicating if the optimizer exited successfully
+        - message: a string which describes the cause of the termination
+    
+    References
+    ----------
+    .. [1] R. Storn and K. Price, *Differential Evolution - A Simple and Efficient Heuristic for global Optimization over Continuous Spaces*, Journal of Global Optimization, 1997, 11(4): 341-359
+    
+    """
     # Cost function
     if not hasattr(fun, "__call__"):
         raise TypeError()
