@@ -66,7 +66,7 @@ def minimize(
          - 'mpi': use MPI (uses :mod:`mpi4py`)
     return_all : bool, optional, default False
         Set to True to return an array with shape (`nit`, `popsize`, `ndim`) of all the solutions at each iteration.
-        
+
     Returns
     -------
     stochopy.optimize.OptimizeResult
@@ -75,11 +75,11 @@ def minimize(
         - `fun`: the solution function value
         - `success`: a Boolean flag indicating if the optimizer exited successfully
         - `message`: a string which describes the cause of the termination
-    
+
     References
     ----------
     .. [1] N. Hansen, *The CMA evolution strategy: A tutorial*, Inria, Université Paris-Saclay, LRI, 2011, 102: 1-34
-    
+
     """
     # Cost function
     if not hasattr(fun, "__call__"):
