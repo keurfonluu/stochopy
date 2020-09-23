@@ -50,8 +50,8 @@ def sample(
 
     Returns
     -------
-    SampleResult
-        The sampling result represented as a SampleResult object. Important attributes are:
+    stochopy.sample.SampleResult
+        The sampling result represented as a :class:`stochopy.sample.SampleResult`. Important attributes are:
         - `x`: the best sample array
         - `fun`: the best sample function value
         - `xall`: the samples array
@@ -129,7 +129,6 @@ def sample(
     res = SampleResult(
         x=xall[idx],
         fun=funall[idx],
-        nfev=maxiter,
         nit=maxiter,
         accept_ratio=n_accepted / maxiter,
     )

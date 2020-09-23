@@ -9,7 +9,23 @@ _sampler_map = {}
 
 
 class SampleResult(BaseResult):
-    """Represent the sampling result."""
+    """
+    Represent the sampling result.
+    
+    Attributes
+    ----------
+    x : array_like
+        The best solution sampled.
+    fun : scalar
+        The solution function value.
+    nit : int
+        Number of samples generated.
+
+    Notes
+    -----
+    There may be additional attributes not listed above depending of the specific solver.
+    
+    """
 
     pass
 
@@ -52,8 +68,8 @@ def sample(fun, bounds, x0=None, args=(), method="mcmc", options=None):
 
     Returns
     -------
-    SampleResult
-        The sampling result represented as a SampleResult object. Important attributes are:
+    stochopy.sample.SampleResult
+        The sampling result represented as a :class:`stochopy.sample.SampleResult`. Important attributes are:
         - `x`: the best sample array
         - `fun`: the best sample function value
         - `xall`: the samples array

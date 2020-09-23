@@ -1,5 +1,10 @@
 class BaseResult(dict):
-    """Represents the optimization or sampling result."""
+    """
+    Represent the optimization or sampling result.
+
+    Base class. Do not use.
+    
+    """
 
     def __getattr__(self, name):
         """Define dict.attr as an alias of dict[attr]."""

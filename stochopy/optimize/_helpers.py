@@ -9,7 +9,29 @@ _optimizer_map = {}
 
 
 class OptimizeResult(BaseResult):
-    """Represent the optimization result."""
+    """
+    Represent the optimization result.
+    
+    Attributes
+    ----------
+    x : array_like
+        The solution of the optimization.
+    success : bool
+        Whether or not the optimizer exited successfully.
+    status : int
+        Termination status of the optimizer. Its value depends on the underlying solver. Refer to message for details.
+    message : str
+        Description of the cause of the termination.
+    fun : scalar
+        The solution function value.
+    nit : int
+        Number of iterations performed by the optimizer.
+
+    Notes
+    -----
+    There may be additional attributes not listed above depending of the specific solver.
+    
+    """
 
     pass
 
@@ -55,12 +77,12 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
 
     Returns
     -------
-    OptimizeResult
-        The optimization result represented as a OptimizeResult object. Important attributes are:
-        - x: the solution array
-        - fun: the solution function value
-        - success: a Boolean flag indicating if the optimizer exited successfully
-        - message: a string which describes the cause of the termination
+    stochopy.optimize.OptimizeResult
+        The optimization result represented as a :class:`stochopy.optimize.OptimizeResult`. Important attributes are:
+        - `x`: the solution array
+        - `fun`: the solution function value
+        - `success`: a Boolean flag indicating if the optimizer exited successfully
+        - `message`: a string which describes the cause of the termination
 
     """
     options = options if options else {}
