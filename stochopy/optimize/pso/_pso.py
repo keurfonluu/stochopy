@@ -20,7 +20,7 @@ def minimize(
     xtol=1.0e-8,
     ftol=1.0e-8,
     constraints=None,
-    updating="deferred",
+    updating="immediate",
     workers=1,
     backend=None,
     return_all=False,
@@ -58,7 +58,7 @@ def minimize(
         Constraints definition:
          - None: no constraint
          - 'Shrink': infeasible solutions are repaired by shrinking particles' velocity vector
-    updating : str {'immediate', 'deferred'}, optional, default 'deferred'
+    updating : str {'immediate', 'deferred'}, optional, default 'immediate'
         If `'immediate'`, the best solution vector is continuously updated within a single generation. This can lead to faster convergence as candidate solutions can take advantage of continuous improvements in the best solution. With `'deferred'`, the best solution vector is updated once per generation. Only `'deferred'` is compatible with parallelization, and is overridden when `workers` is not `0` or `1` or `backend == 'mpi'`.
     workers : int, optional, default 1
         The population is subdivided into workers sections and evaluated in parallel (uses :class:`joblib.Parallel`). Supply -1 to use all available CPU cores.

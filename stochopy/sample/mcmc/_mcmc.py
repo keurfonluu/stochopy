@@ -18,7 +18,7 @@ def sample(
     perc=1.0,
     seed=None,
     constraints=None,
-    return_all=False,
+    return_all=True,
 ):
     """
     Sample the variable space using the Metropolis-Hastings algorithm.
@@ -45,7 +45,7 @@ def sample(
         Constraints definition:
          - None: no constraint
          - 'Reject': infeasible solutions are always rejected
-    return_all : bool, optional, default False
+    return_all : bool, optional, default True
         Set to True to return an array with shape (`maxiter`, `ndim`) of all the samples.
 
     Returns

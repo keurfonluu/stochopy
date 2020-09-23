@@ -20,7 +20,7 @@ def sample(
     jac=None,
     finite_diff_abs_step=1.0e-4,
     constraints=None,
-    return_all=False,
+    return_all=True,
 ):
     """
     Sample the variable space using the Hamiltonian (Hybrid) Monte-Carlo algorithm.
@@ -53,7 +53,7 @@ def sample(
         Constraints definition:
          - None: no constraint
          - 'Reject': infeasible solutions are always rejected
-    return_all : bool, optional, default False
+    return_all : bool, optional, default True
         Set to True to return an array with shape (`maxiter`, `ndim`) of all the samples.
 
     Returns

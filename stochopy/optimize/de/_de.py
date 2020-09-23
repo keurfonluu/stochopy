@@ -18,13 +18,13 @@ def minimize(
     maxiter=100,
     popsize=10,
     mutation=0.5,
-    recombination=0.1,
-    strategy="rand1bin",
+    recombination=0.9,
+    strategy="best1bin",
     seed=None,
     xtol=1.0e-8,
     ftol=1.0e-8,
     constraints=None,
-    updating="deferred",
+    updating="immediate",
     workers=1,
     backend=None,
     return_all=False,
@@ -48,9 +48,9 @@ def minimize(
         Total population size.
     mutation : scalar, optional, default 0.5
         The mutation constant. In the literature this is also known as differential weight, being denoted by F. It should be in the range [0, 2]. Increasing the mutation constant increases the search radius, but will slow down convergence.
-    recombination : scalar, optional, default 0.1
+    recombination : scalar, optional, default 0.9
         The recombination constant, should be in the range [0, 1]. In the literature this is also known as the crossover probability, being denoted by CR. Increasing this value allows a larger number of mutants to progress into the next generation, but at the risk of population stability.
-    strategy : str, optional, default 'rand1'
+    strategy : str, optional, default 'best1bin'
         The differential evolution strategy to use. Should be one of:
          - 'rand1bin'
          - 'rand2bin'
@@ -66,7 +66,7 @@ def minimize(
         Constraints definition:
          - None: no constraint
          - 'Random': infeasible solutions are resampled in the feasible space defined by `bounds`
-    updating : str {'immediate', 'deferred'}, optional, default 'deferred'
+    updating : str {'immediate', 'deferred'}, optional, default 'immediate'
         If `'immediate'`, the best solution vector is continuously updated within a single generation. This can lead to faster convergence as candidate solutions can take advantage of continuous improvements in the best solution. With `'deferred'`, the best solution vector is updated once per generation. Only `'deferred'` is compatible with parallelization, and is overridden when `workers` is not `0` or `1` or `backend == 'mpi'`.
     workers : int, optional, default 1
         The population is subdivided into workers sections and evaluated in parallel (uses :class:`joblib.Parallel`). Supply -1 to use all available CPU cores.
