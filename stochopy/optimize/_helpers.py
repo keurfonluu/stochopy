@@ -11,7 +11,7 @@ _optimizer_map = {}
 class OptimizeResult(BaseResult):
     """
     Represent the optimization result.
-    
+
     Attributes
     ----------
     x : array_like
@@ -30,7 +30,7 @@ class OptimizeResult(BaseResult):
     Notes
     -----
     There may be additional attributes not listed above depending of the specific solver.
-    
+
     """
 
     pass

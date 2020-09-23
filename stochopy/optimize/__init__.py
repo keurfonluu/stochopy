@@ -1,4 +1,4 @@
-from ._helpers import minimize, OptimizeResult
+from ._helpers import OptimizeResult, minimize
 from .cmaes import minimize as cmaes
 from .cpso import minimize as cpso
 from .de import minimize as de

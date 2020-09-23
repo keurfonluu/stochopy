@@ -11,7 +11,7 @@ _sampler_map = {}
 class SampleResult(BaseResult):
     """
     Represent the sampling result.
-    
+
     Attributes
     ----------
     x : array_like
@@ -24,7 +24,7 @@ class SampleResult(BaseResult):
     Notes
     -----
     There may be additional attributes not listed above depending of the specific solver.
-    
+
     """
 
     pass

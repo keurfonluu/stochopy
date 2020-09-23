@@ -3,7 +3,7 @@ class BaseResult(dict):
     Represent the optimization or sampling result.
 
     Base class. Do not use.
-    
+
     """
 
     def __getattr__(self, name):

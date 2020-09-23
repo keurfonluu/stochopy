@@ -1,4 +1,4 @@
-from ._helpers import sample, SampleResult
+from ._helpers import SampleResult, sample
 from .hmc import sample as hmc
 from .mcmc import sample as mcmc
 

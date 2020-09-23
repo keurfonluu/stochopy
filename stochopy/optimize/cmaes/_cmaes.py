@@ -153,9 +153,7 @@ def cmaes(
         cons = _constraints_map[constraints]
 
     # Initial mean
-    xmean = (
-        numpy.random.uniform(-1.0, 1.0, ndim) if x0 is None else standardize(x0)
-    )
+    xmean = numpy.random.uniform(-1.0, 1.0, ndim) if x0 is None else standardize(x0)
     xold = numpy.empty(ndim)
 
     # Number of parents

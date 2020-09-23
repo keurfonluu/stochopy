@@ -127,10 +127,7 @@ def sample(
 
     idx = numpy.argmin(funall)
     res = SampleResult(
-        x=xall[idx],
-        fun=funall[idx],
-        nit=maxiter,
-        accept_ratio=n_accepted / maxiter,
+        x=xall[idx], fun=funall[idx], nit=maxiter, accept_ratio=n_accepted / maxiter,
     )
     if return_all:
         res["xall"] = xall
