@@ -1,0 +1,39 @@
+name: Python package
+
+on: [pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        lfs: true
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libopenmpi-dev openmpi-bin
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mpi4py
+        pip install .
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pip install coverage
+        coverage run -m pytest
+    - name: Submit coverage
+      if: ${{ matrix.python-version == '3.8' }}
+      run: |
+        pip install codecov
+        codecov --token=${{ secrets.CODECOV_TOKEN }}

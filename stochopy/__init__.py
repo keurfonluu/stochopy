@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
+from . import factory, optimize, sample
+from .__about__ import __version__
 
-"""
-StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
-to sample or optimize objective functions with the most popular algorithms.
-
-Author: Keurfon Luu <keurfon.luu@mines-paristech.fr>
-License: MIT
-"""
-
-from .monte_carlo import MonteCarlo
-from .evolutionary_algorithm import Evolutionary
-from .benchmark_functions import BenchmarkFunction
-from .gui import StochOGUI
-
-__all__ = [ "MonteCarlo", "Evolutionary", "BenchmarkFunction", "StochOGUI" ]
-__version__ = "1.7.3"
+__all__ = [
+    "factory",
+    "optimize",
+    "sample",
+    "__version__",
+]
