@@ -13,7 +13,11 @@ def rosenbrock():
 def optimize(method, options, xref):
     options.update({"maxiter": 128, "popsize": 8, "seed": 42, "return_all": True})
     fun, bounds = rosenbrock()
-    x = stochopy.optimize.minimize(fun, bounds, options=options, method=method)
+    if "x0" in options:
+        x0 = options.pop("x0")
+    else:
+        x0 = None
+    x = stochopy.optimize.minimize(fun, bounds, x0=x0, options=options, method=method)
 
     assert numpy.allclose(xref, x.x)
     if options["constraints"] is not None:

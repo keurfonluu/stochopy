@@ -7,9 +7,9 @@ import helpers
     "options, xref",
     [
         ({"constraints": None}, [0.29967256, 0.0803311]),
-        ({"xmean0": [-5.0, -5.0], "constraints": None}, [0.99998135, 0.99995618]),
+        ({"x0": [-5.0, -5.0], "constraints": None}, [0.99998135, 0.99995618]),
         ({"constraints": "Penalize"}, [0.18765786, 0.05858025]),
-        ({"xmean0": [-5.0, -5.0], "constraints": "Penalize"}, [0.99998135, 0.99995618]),
+        ({"x0": [-5.0, -5.0], "constraints": "Penalize"}, [0.99998135, 0.99995618]),
     ],
 )
 def test_cmaes(options, xref):
@@ -113,9 +113,9 @@ def test_pso(options, xref):
     "options, xref",
     [
         ({"constraints": None}, [0.90013445, 0.85037782]),
-        ({"xmean0": [-5.0, -5.0], "constraints": None}, [0.84059993, 0.69998341]),
+        ({"x0": [-5.0, -5.0], "constraints": None}, [0.84059993, 0.69998341]),
         ({"constraints": "Penalize"}, [0.90013445, 0.85037782]),
-        ({"xmean0": [-5.0, -5.0], "constraints": "Penalize"}, [0.82405114, 0.61993136]),
+        ({"x0": [-5.0, -5.0], "constraints": "Penalize"}, [0.82405114, 0.61993136]),
     ],
 )
 def test_vdcma(options, xref):

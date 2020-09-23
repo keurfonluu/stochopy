@@ -18,7 +18,6 @@ def minimize(
     popsize=10,
     sigma=0.1,
     muperc=0.5,
-    xmean0=None,
     seed=None,
     xtol=1.0e-8,
     ftol=1.0e-8,
@@ -92,7 +91,7 @@ def minimize(
 
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != len(bounds):
+        if numpy.ndim(x0) != 1 or len(x0) != len(bounds):
             raise ValueError()
 
     # CMA-ES parameters
@@ -101,10 +100,6 @@ def minimize(
 
     if not 0.0 < muperc <= 1.0:
         raise ValueError()
-
-    if xmean0 is not None:
-        if numpy.ndim(xmean0) != 1 or len(xmean0) != len(bounds):
-            raise ValueError()
 
     # Seed
     if seed is not None:
@@ -118,7 +113,6 @@ def minimize(
         popsize,
         sigma,
         muperc,
-        xmean0,
         constraints,
         xtol,
         ftol,
@@ -137,7 +131,6 @@ def cmaes(
     popsize,
     sigma,
     muperc,
-    xmean0,
     constraints,
     xtol,
     ftol,
@@ -161,7 +154,7 @@ def cmaes(
 
     # Initial mean
     xmean = (
-        numpy.random.uniform(-1.0, 1.0, ndim) if xmean0 is None else standardize(xmean0)
+        numpy.random.uniform(-1.0, 1.0, ndim) if x0 is None else standardize(x0)
     )
     xold = numpy.empty(ndim)
 
