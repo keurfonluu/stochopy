@@ -28,7 +28,7 @@ def minimize(
 ):
     """
     Minimize an objective function using Covariance Matrix Adaptation - Evolution Strategy (CMA-ES).
-    
+
     Parameters
     ----------
     fun : callable
