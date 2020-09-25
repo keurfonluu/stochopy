@@ -1,159 +1,130 @@
-********
-StochOPy
-********
-
-.. figure:: examples/stochopy_viewer.png
-
-StochOPy (STOCHastic OPtimization for PYthon) provides user-friendly routines
-to sample or optimize objective functions with the most popular algorithms.
-
-:Version: 1.7.3
-:Author: Keurfon Luu
-:Web site: https://github.com/keurfonluu/stochopy
-:Copyright: This document has been placed in the public domain.
-:License: StochOPy is released under the MIT License.
-
-**NOTE**: StochOPy has been implemented in the frame of my Ph. D. thesis. If
-you find any error or bug, or if you have any suggestion, please don't hesitate
-to contact me.
-
-
-Features
+stochopy
 ========
 
-StochOPy provides routines for sampling of a model parameter space:
+|License| |Stars| |Pyversions| |Version| |Downloads| |Code style: black| |Codacy Badge| |Codecov| |Build|
 
-* Pure Monte-Carlo
-* Metropolis-Hastings algorithm
-* Hamiltonian (Hybrid) Monte-Carlo [1]_ [2]_
+stochopy provides user-friendly routines to sample or optimize objective functions with the most popular algorithms.
 
-or optimization of an objective function:
+Features
+--------
 
-* Differential Evolution [3]_
-* Particle Swarm Optimization [4]_ [5]_
-* Competitive Particle Swarm Optimization [6]_
-* Covariance Matrix Adaptation - Evolution Strategy [7]_
-* VD-CMA [8]_
+Sampling algorithms:
 
+-  Hamiltonian (Hybrid) Monte-Carlo (HMC),
+-  Markov-Chain Monte-Carlo (McMC).
+
+Stochastic optimizers:
+
+-  Competitive Particle Swarm Optimization (CPSO),
+-  Covariance Matrix Adaptation - Evolution Strategy (CMA-ES),
+-  Differential Evolution (DE),
+-  Particle Swarm Optimization (PSO),
+-  VD-CMA.
+
+Parallel backends:
+
+- joblib (`threading` and `loky`),
+- mpi4py (`mpi`).
 
 Installation
-============
+------------
 
-The recommended way to install StochOPy is through pip (internet required):
+The recommended way to install **stochopy** and all its dependencies is through the Python Package Index:
 
-.. code-block:: bash
+.. code::
 
-    pip install stochopy
+   pip install stochopy --user
 
-Otherwise, download and extract the package, then run:
+Otherwise, clone and extract the package, then run from the package location:
 
-.. code-block:: bash
+.. code::
 
-    python setup.py install
+   pip install . --user
 
+To test the integrity of the installed package, check out this repository and run:
+
+.. code::
+
+   pytest
+
+Documentation
+-------------
+
+Refer to the online `documentation <https://keurfonluu.github.io/stochopy/>`__ for detailed description of the API and examples.
+
+Alternatively, the documentation can be built using `Sphinx <https://www.sphinx-doc.org/en/master/>`__
+
+.. code:: bash
+
+   pip install -r doc/requirements.txt
+   sphinx-build -b html doc/source doc/build
 
 Usage
-=====
+-----
 
-**New in 1.4.0**: added support for MPI for evolutionary algorithms (you may
-need to install the package `MPI4PY <https://github.com/mpi4py/mpi4py>`__ beforehand).
-Run the example script inside the folder examples:
-
-.. code-block:: bash
-
-  mpiexec -n 4 python example_mpi.py
-
-Note that StochOPy still work even though MPI4PY is not installed.
-
-**New in 1.3.0**: run StochOPy Viewer to see how popular stochastic algorithms
-work, and play with the tuning parameters on several benchmark functions.
+Given an optimization problem defined by an objective function and a feasible space:
 
 .. code-block:: python
 
-  from stochopy.gui import main
+   import numpy
 
-  main()
+   def rosenbrock(x):
+      x = numpy.asarray(x)
+      sum1 = ((x[1:] - x[:-1] ** 2) ** 2).sum()
+      sum2 = numpy.square(1.0 - x[:-1]).sum()
+      return 100.0 * sum1 + sum2
 
+   bounds = [[-5.12, 5.12], [-5.12, 5.12]]  # The number of variables to optimize is len(bounds)
 
-First, import StochOPy and define an objective function (here Rosenbrock):
-
-.. code-block:: python
-
-    import numpy as np
-    from stochopy import MonteCarlo, Evolutionary
-
-    f = lambda x: 100*np.sum((x[1:]-x[:-1]**2)**2)+np.sum((1-x[:-1])**2)
-
-You can define the search space boundaries if necessary:
+The optimal solution can be found following:
 
 .. code-block:: python
 
-    n_dim = 2
-    lower = np.full(n_dim, -5.12)
-    upper = np.full(n_dim, 5.12)
+   from stochopy.optimize import minimize
 
-Initialize the Monte-Carlo sampler:
+   x = minimize(rosenbrock, bounds, method="cmaes", options={"maxiter": 100, "popsize": 10, "seed": 0})
 
-.. code-block:: python
+`minimize` returns a dictionary that contains the results of the optimization:
 
-    max_iter = 1000
-    mc = MonteCarlo(f, lower = lower, upper = upper, max_iter = max_iter)
+.. code-block::
 
-Now, you can start sampling with the simple method 'sample':
+        fun: 3.862267657514075e-09
+    message: 'best solution value is lower than ftol'
+       nfev: 490
+        nit: 49
+     status: 1
+    success: True
+          x: array([0.99997096, 0.99993643])
 
-.. code-block:: python
+Contributing
+------------
 
-    mc.sample(sampler = "hamiltonian", stepsize = 0.005, n_leap = 20, xstart = [ 2., 2. ])
+Please refer to the `Contributing
+Guidelines <https://github.com/keurfonluu/stochopy/blob/master/CONTRIBUTING.rst>`__ to see how you can help. This project is released with a `Code of Conduct <https://github.com/keurfonluu/stochopy/blob/master/CODE_OF_CONDUCT.rst>`__ which you agree to abide by when contributing.
 
-Note that sampler can be set to "pure" or "hastings" too.
-The models sampled and their corresponding energies are stored in:
+.. |License| image:: https://img.shields.io/github/license/keurfonluu/stochopy
+   :target: https://github.com/keurfonluu/stochopy/blob/master/LICENSE
 
-.. code-block:: python
+.. |Stars| image:: https://img.shields.io/github/stars/keurfonluu/stochopy?logo=github
+   :target: https://github.com/keurfonluu/stochopy
 
-    print(mc.models)
-    print(mc.energy)
+.. |Pyversions| image:: https://img.shields.io/pypi/pyversions/stochopy.svg?style=flat
+   :target: https://pypi.org/pypi/stochopy/
 
-Optimization is just as easy:
+.. |Version| image:: https://img.shields.io/pypi/v/stochopy.svg?style=flat
+   :target: https://pypi.org/project/stochopy
 
-.. code-block:: python
+.. |Downloads| image:: https://pepy.tech/badge/stochopy
+   :target: https://pepy.tech/project/stochopy
 
-    n_dim = 10
-    lower = np.full(n_dim, -5.12)
-    upper = np.full(n_dim, 5.12)
-    popsize = 4 + np.floor(3.*np.log(n_dim))
-    ea = Evolutionary(f, lower = lower, upper = upper, popsize = popsize, max_iter = max_iter)
-    xopt, gfit = ea.optimize(solver = "cmaes")
-    print(xopt)
-    print(gfit)
+.. |Code style: black| image:: https://img.shields.io/badge/code%20style-black-000000.svg?style=flat
+   :target: https://github.com/psf/black
 
+.. |Codacy Badge| image:: https://img.shields.io/codacy/grade/29b21d65d07e40219dcc9ad1c978cbeb.svg?style=flat
+   :target: https://www.codacy.com/manual/keurfonluu/stochopy/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=keurfonluu/stochopy&amp;utm_campaign=Badge_Grade
 
-Related works
-=============
+.. |Codecov| image:: https://img.shields.io/codecov/c/github/keurfonluu/stochopy.svg?style=flat
+   :target: https://codecov.io/gh/keurfonluu/stochopy
 
-* `StochOPy WebApp <https://github.com/keurfonluu/stochopy-webapp>`__: StochOPy WebApp allows the users to see how popular stochastic algorithms perform on different benchmark functions.
-* `StochANNPy <https://github.com/keurfonluu/stochannpy>`__: StochANNPy (STOCHAstic Artificial Neural Network for PYthon) provides user-friendly routines compatible with Scikit-Learn for stochastic learning.
-* `StochOptim <https://github.com/keurfonluu/stochoptim>`__: StochOptim provides user friendly functions written in modern Fortran to solve optimization problems using stochastic algorithms in a parallel environment (MPI).
-
-
-References
-==========
-.. [1] S. Duane, A. D. Kennedy, B. J. Pendleton and D. Roweth, *Hybrid Monte Carlo*,
-       Physics Letters B., 1987, 195(2): 216-222
-.. [2] N. Radford, *MCMC Using Hamiltonian Dynamics*, Handbook of Markov Chain
-       Monte Carlo, Chapman and Hall/CRC, 2011
-.. [3] R. Storn and K. Price, *Differential Evolution - A Simple and Efficient
-       Heuristic for global Optimization over Continuous Spaces*, Journal of
-       Global Optimization, 1997, 11(4): 341-359
-.. [4] J. Kennedy and R. Eberhart, *Particle swarm optimization*, Proceedings
-       of ICNN'95 - International Conference on Neural Networks, 1995, 4: 1942-1948
-.. [5] F. Van Den Bergh, *An analysis of particle swarm optimizers*, University
-       of Pretoria, 2001
-.. [6] K. Luu, M. Noble, A. Gesret, N. Balayouni and P.-F. Roux, *A parallel
-       competitive Particle Swarm Optimization for non-linear first arrival
-       traveltime tomography and uncertainty quantification*,
-       Computers & Geosciences, 2018, 113: 81-93
-.. [7] N. Hansen, *The CMA evolution strategy: A tutorial*, Inria, Université
-       Paris-Saclay, LRI, 2011, 102: 1-34
-.. [8] Y. Akimoto, A. Auger and N. Hansen, *Comparison-Based Natural Gradient
-       Optimization in High Dimension*, Proceedings of the 2014 conference on
-       Genetic and evolutionary computation, 2014, 373-380
+.. |Build| image:: https://img.shields.io/github/workflow/status/keurfonluu/stochopy/Python%20package
+   :target: https://github.com/keurfonluu/stochopy
