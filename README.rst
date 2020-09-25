@@ -23,8 +23,8 @@ Stochastic optimizers:
 
 Parallel backends:
 
-- joblib (`threading` and `loky`),
-- mpi4py (`mpi`).
+- joblib (``threading`` and ``loky``),
+- mpi4py (``mpi``).
 
 Installation
 ------------
@@ -84,7 +84,7 @@ The optimal solution can be found following:
 
    x = minimize(rosenbrock, bounds, method="cmaes", options={"maxiter": 100, "popsize": 10, "seed": 0})
 
-`minimize` returns a dictionary that contains the results of the optimization:
+``minimize`` returns a dictionary that contains the results of the optimization:
 
 .. code-block::
 
