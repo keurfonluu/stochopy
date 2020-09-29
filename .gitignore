@@ -100,9 +100,5 @@ site
 # mypy
 .mypy_cache
 
-# Nose created egg files
-dependency_links.txt
-PKG-INFO
-requires.txt
-SOURCES.txt
-top_level.txt
+# VSCode
+.vscode
