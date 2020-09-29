@@ -4,15 +4,21 @@ Sample
 .. autofunction:: stochopy.sample.sample
 
 
-Available samplers
-------------------
-
-.. autofunction:: stochopy.sample.hmc
-
-.. autofunction:: stochopy.sample.mcmc
-
-
 Result
 ------
 
 .. autofunction:: stochopy.sample.SampleResult
+
+
+Available samplers
+------------------
+
+Hamiltonian Monte-Carlo
+***********************
+
+.. autofunction:: stochopy.sample.hmc
+
+Markov-Chain Monte-Carlo
+************************
+
+.. autofunction:: stochopy.sample.mcmc

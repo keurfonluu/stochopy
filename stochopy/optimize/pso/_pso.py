@@ -31,11 +31,11 @@ def minimize(
     Parameters
     ----------
     fun : callable
-        The objective function to be minimized. Must be in the form `f(x, *args)`, where `x` is the argument in the form of a 1-D array and args is a tuple of any additional fixed parameters needed to completely specify the function.
+        The objective function to be minimized. Must be in the form ``f(x, *args)``, where ``x`` is the argument in the form of a 1-D array and args is a tuple of any additional fixed parameters needed to completely specify the function.
     bounds : array_like
-        Bounds for variables. `(min, max)` pairs for each element in `x`, defining the finite lower and upper bounds for the optimizing argument of `fun`. It is required to have `len(bounds) == len(x)`. `len(bounds)` is used to determine the number of parameters in `x`.
+        Bounds for variables. ``(min, max)`` pairs for each element in ``x``, defining the finite lower and upper bounds for the optimizing argument of ``fun``. It is required to have ``len(bounds) == len(x)``. ``len(bounds)`` is used to determine the number of parameters in ``x``.
     x0 : array_like or None, optional, default None
-        Initial population. Array of real elements with shape (`popsize`, `ndim`), where `ndim` is the number of independent variables. If `x0` is not specified, the population is initialized using Latin Hypercube sampling.
+        Initial population. Array of real elements with shape (``popsize``, ``ndim``), where ``ndim`` is the number of independent variables. If ``x0`` is not specified, the population is initialized using Latin Hypercube sampling.
     args : tuple, optional, default None
         Extra arguments passed to the objective function.
     maxiter : int, optional, default 100
@@ -56,29 +56,33 @@ def minimize(
         Objective function value tolerance for termination.
     constraints : str or None, optional, default None
         Constraints definition:
+
          - None: no constraint
          - 'Shrink': infeasible solutions are repaired by shrinking particles' velocity vector
+
     updating : str {'immediate', 'deferred'}, optional, default 'immediate'
-        If `'immediate'`, the best solution vector is continuously updated within a single generation. This can lead to faster convergence as candidate solutions can take advantage of continuous improvements in the best solution. With `'deferred'`, the best solution vector is updated once per generation. Only `'deferred'` is compatible with parallelization, and is overridden when `workers` is not `0` or `1` or `backend == 'mpi'`.
+        If ``'immediate'``, the best solution vector is continuously updated within a single generation. This can lead to faster convergence as candidate solutions can take advantage of continuous improvements in the best solution. With ``'deferred'``, the best solution vector is updated once per generation. Only ``'deferred'`` is compatible with parallelization, and is overridden when ``workers`` is not ``0`` or ``1`` or ``backend == 'mpi'``.
     workers : int, optional, default 1
         The population is subdivided into workers sections and evaluated in parallel (uses :class:`joblib.Parallel`). Supply -1 to use all available CPU cores.
     backend : str {'loky', 'threading', 'mpi'}, optional, default 'threading'
-        Parallel backend to use when `workers` is not `0` or `1`:
+        Parallel backend to use when ``workers`` is not ``0`` or ``1``:
+
          - 'loky': disable threading
          - 'threading': enable threading
          - 'mpi': use MPI (uses :mod:`mpi4py`)
+
     return_all : bool, optional, default False
-        Set to True to return an array with shape (nit, popsize, ndim) of all the solutions at each iteration.
+        Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
 
     Returns
     -------
     :class:`stochopy.optimize.OptimizeResult`
         The optimization result represented as a :class:`stochopy.optimize.OptimizeResult`. Important attributes are:
 
-         - `x`: the solution array
-         - `fun`: the solution function value
-         - `success`: a Boolean flag indicating if the optimizer exited successfully
-         - `message`: a string which describes the cause of the termination
+         - ``x``: the solution array
+         - ``fun``: the solution function value
+         - ``success``: a Boolean flag indicating if the optimizer exited successfully
+         - ``message``: a string which describes the cause of the termination
 
     References
     ----------
