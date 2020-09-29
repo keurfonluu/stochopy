@@ -7,6 +7,7 @@ API Reference
 
    optimize
    sample
+   factory
 
 
 * :ref:`genindex`
