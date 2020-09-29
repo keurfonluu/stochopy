@@ -77,7 +77,7 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
 
     Returns
     -------
-    stochopy.optimize.OptimizeResult
+    :class:`stochopy.optimize.OptimizeResult`
         The optimization result represented as a :class:`stochopy.optimize.OptimizeResult`. Important attributes are:
         - `x`: the solution array
         - `fun`: the solution function value
