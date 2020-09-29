@@ -28,11 +28,11 @@ def sample(
     Parameters
     ----------
     fun : callable
-        The objective function to be sampled. Must be in the form `f(x, *args)`, where `x` is the argument in the form of a 1-D array and args is a tuple of any additional fixed parameters needed to completely specify the function.
+        The objective function to be sampled. Must be in the form ``f(x, *args)``, where ``x`` is the argument in the form of a 1-D array and args is a tuple of any additional fixed parameters needed to completely specify the function.
     bounds : array_like
-        Bounds for variables. `(min, max)` pairs for each element in `x`, defining the finite lower and upper bounds for the sampling argument of `fun`. It is required to have `len(bounds) == len(x)`. `len(bounds)` is used to determine the number of parameters in `x`.
+        Bounds for variables. ``(min, max)`` pairs for each element in ``x``, defining the finite lower and upper bounds for the sampling argument of ``fun``. It is required to have ``len(bounds) == len(x)``. ``len(bounds)`` is used to determine the number of parameters in ``x``.
     x0 : array_like or None, optional, default None
-        Initial sample. Array of real elements of size (`ndim`,), where `ndim` is the number of independent variables.
+        Initial sample. Array of real elements of size (``ndim``,), where ``ndim`` is the number of independent variables.
     args : tuple, optional, default None
         Extra arguments passed to the objective function.
     maxiter : int, optional, default 100
@@ -40,30 +40,33 @@ def sample(
     nleap : int, optional, default 10
         Number of leap-frog steps.
     stepsize : scalar or array_like, optional, default 0.01
-        Leap-frog step size (as a fraction of feasible space defined by `bounds`).
+        Leap-frog step size (as a fraction of feasible space defined by ``bounds``).
     perc : scalar, optional, default 1.0
         Number of dimensions to perturb at each iteration (as a fraction of total number of variables).
     seed : int or None, optional, default None
         Seed for random number generator.
     jac : callable or None, optional, default None
-        Method for computing the gradient vector. If it is a callable, it should be a function in the form  `jac(x, *args)` that returns the gradient vector where `x` is an array with shape (`ndim`,) and `args` is a tuple with the fixed parameters. If `None`, the gradient will be estimated using 2-point finite difference estimation with an absolute step size.
+        Method for computing the gradient vector. If it is a callable, it should be a function in the form  ``jac(x, *args)`` that returns the gradient vector where ``x`` is an array with shape (``ndim``,) and ``args`` is a tuple with the fixed parameters. If ``None``, the gradient will be estimated using 2-point finite difference estimation with an absolute step size.
     finite_diff_abs_step : scalar, optional, default 1.0e-4
         The absolute step size to use for numerical approximation of the jacobian.
     constraints : str or None, optional, default None
         Constraints definition:
+
          - None: no constraint
          - 'Reject': infeasible solutions are always rejected
+
     return_all : bool, optional, default True
-        Set to True to return an array with shape (`maxiter`, `ndim`) of all the samples.
+        Set to True to return an array with shape (``maxiter``, ``ndim``) of all the samples.
 
     Returns
     -------
-    stochopy.sample.SampleResult
+    :class:`stochopy.sample.SampleResult`
         The sampling result represented as a :class:`stochopy.sample.SampleResult`. Important attributes are:
-        - `x`: the best sample array
-        - `fun`: the best sample function value
-        - `xall`: the samples array
-        - 'funall`: the samples' function value array
+
+         - ``x``: the best sample array
+         - ``fun``: the best sample function value
+         - ``xall``: the samples array
+         - '`funall``: the samples' function value array
 
     References
     ----------
