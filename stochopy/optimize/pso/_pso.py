@@ -74,10 +74,11 @@ def minimize(
     -------
     :class:`stochopy.optimize.OptimizeResult`
         The optimization result represented as a :class:`stochopy.optimize.OptimizeResult`. Important attributes are:
-        - `x`: the solution array
-        - `fun`: the solution function value
-        - `success`: a Boolean flag indicating if the optimizer exited successfully
-        - `message`: a string which describes the cause of the termination
+
+         - `x`: the solution array
+         - `fun`: the solution function value
+         - `success`: a Boolean flag indicating if the optimizer exited successfully
+         - `message`: a string which describes the cause of the termination
 
     References
     ----------

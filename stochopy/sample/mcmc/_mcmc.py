@@ -52,10 +52,11 @@ def sample(
     -------
     :class:`stochopy.sample.SampleResult`
         The sampling result represented as a :class:`stochopy.sample.SampleResult`. Important attributes are:
-        - `x`: the best sample array
-        - `fun`: the best sample function value
-        - `xall`: the samples array
-        - 'funall`: the samples' function value array
+
+         - `x`: the best sample array
+         - `fun`: the best sample function value
+         - `xall`: the samples array
+         - 'funall`: the samples' function value array
 
     """
     # Cost function

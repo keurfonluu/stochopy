@@ -57,32 +57,29 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
         Extra arguments passed to the objective function.
     method : str, optional, default 'de'
         Type of solver. Should be one of:
+
          - 'cmaes'
          - 'cpso'
          - 'de'
          - 'pso'
          - 'vdcma'
+
     options : dict or None, optional, default None
         A dictionary of solver options. All methods accept the following generic options:
 
-        ..
-
-            maxiter : int
-                Maximum number of iterations to perform.
-            seed : int or None
-                Seed for random number generator.
-            return_all : bool
-                Set to True to return an array of all the solutions at each iteration.
-
+         - maxiter (int): maximum number of iterations to perform
+         - seed (int or None): seed for random number generator
+         - return_all (bool): set to True to return an array of all the solutions at each iteration.
 
     Returns
     -------
     :class:`stochopy.optimize.OptimizeResult`
         The optimization result represented as a :class:`stochopy.optimize.OptimizeResult`. Important attributes are:
-        - `x`: the solution array
-        - `fun`: the solution function value
-        - `success`: a Boolean flag indicating if the optimizer exited successfully
-        - `message`: a string which describes the cause of the termination
+
+         - `x`: the solution array
+         - `fun`: the solution function value
+         - `success`: a Boolean flag indicating if the optimizer exited successfully
+         - `message`: a string which describes the cause of the termination
 
     """
     options = options if options else {}

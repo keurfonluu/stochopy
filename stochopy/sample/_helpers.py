@@ -51,29 +51,27 @@ def sample(fun, bounds, x0=None, args=(), method="mcmc", options=None):
         Extra arguments passed to the objective function.
     method : str, optional, default 'mcmc'
         Type of sampler. Should be one of:
+
          - 'mcmc'
          - 'hmc'
+         
     options : dict or None, optional, default None
         A dictionary of sampler options. All methods accept the following generic options:
 
-        ..
-
-            maxiter : int
-                Total number of samples to generate.
-            seed : int or None
-                Seed for random number generator.
-            return_all : bool
-                Set to True to return an array of all the solutions at each iteration.
+         - maxiter (int): total number of samples to generate
+         - seed (int or None): seed for random number generator
+         - return_all (bool): set to True to return an array of all the solutions at each iteration
 
 
     Returns
     -------
     :class:`stochopy.sample.SampleResult`
         The sampling result represented as a :class:`stochopy.sample.SampleResult`. Important attributes are:
-        - `x`: the best sample array
-        - `fun`: the best sample function value
-        - `xall`: the samples array
-        - 'funall`: the samples' function value array
+
+         - `x`: the best sample array
+         - `fun`: the best sample function value
+         - `xall`: the samples array
+         - 'funall`: the samples' function value array
 
     """
     options = options if options else {}
