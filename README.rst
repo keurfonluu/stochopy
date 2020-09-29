@@ -3,7 +3,7 @@ stochopy
 
 |License| |Stars| |Pyversions| |Version| |Downloads| |Code style: black| |Codacy Badge| |Codecov| |Build|
 
-stochopy provides user-friendly routines to sample or optimize objective functions with the most popular algorithms.
+**stochopy** provides functions for sampling or optimizing objective functions with or without constraints. Its API is directly inspired by **scipy**'s own optimization submodule which should make the switch from one module to another straightforward.
 
 Features
 --------
