@@ -54,7 +54,7 @@ def sample(fun, bounds, x0=None, args=(), method="mcmc", options=None):
 
          - 'mcmc'
          - 'hmc'
-         
+
     options : dict or None, optional, default None
         A dictionary of sampler options. All methods accept the following generic options:
 
