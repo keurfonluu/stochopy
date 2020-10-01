@@ -43,32 +43,32 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinxarg.ext",
     "sphinxcontrib.bibtex",
-    # "sphinx_gallery.gen_gallery",
+    "sphinx_gallery.gen_gallery",
 ]
 
 # Sphinx Gallery settings
-# from sphinx_gallery.sorting import FileNameSortKey
+from sphinx_gallery.sorting import FileNameSortKey
 
-# sphinx_gallery_conf = {
-#     "examples_dirs": [
-#         "../../examples/co2_leakage_along_a_fault/",
-#     ],
-#     "gallery_dirs": [
-#         "examples/co2_leakage_along_a_fault/",
-#     ],
-#     "filename_pattern": r"\.py",
-#     "download_all_examples": False,
-#     "within_subsection_order": FileNameSortKey,
-#     "backreferences_dir": None,
-#     "doc_module": "stochopy",
-#     "image_scrapers": (
-#         "matplotlib",
-#         "pyvista",
-#     ),
-#     "first_notebook_cell": (
-#         "%matplotlib inline\n"
-#     ),
-# }
+sphinx_gallery_conf = {
+    "examples_dirs": [
+        "../../examples/",
+    ],
+    "gallery_dirs": [
+        "examples/",
+    ],
+    "filename_pattern": r"\.py",
+    "download_all_examples": False,
+    "within_subsection_order": FileNameSortKey,
+    "backreferences_dir": None,
+    "doc_module": "stochopy",
+    "image_scrapers": (
+        "matplotlib",
+        # "pyvista",
+    ),
+    "first_notebook_cell": (
+        "%matplotlib inline\n"
+    ),
+}
 
 # # PyVista settings
 # import pyvista

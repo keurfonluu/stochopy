@@ -9,4 +9,5 @@ stochopy's documentation
    :hidden:
    :caption: Reference documentation
    
+   gallery/index
    api/index
