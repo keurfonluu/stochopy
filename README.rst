@@ -5,6 +5,13 @@ stochopy
 
 **stochopy** provides functions for sampling or optimizing objective functions with or without constraints. Its API is directly inspired by **scipy**'s own optimization submodule which should make the switch from one module to another straightforward.
 
+.. figure:: https://raw.githubusercontent.com/keurfonluu/stochopy/master/.github/sample.gif
+   :alt: sample-pso
+   :width: 100%
+   :align: center
+
+   Optimization of 2D multimodal function Styblinski-Tang using PSO.
+
 Features
 --------
 
