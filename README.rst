@@ -109,6 +109,11 @@ Contributing
 Please refer to the `Contributing
 Guidelines <https://github.com/keurfonluu/stochopy/blob/master/CONTRIBUTING.rst>`__ to see how you can help. This project is released with a `Code of Conduct <https://github.com/keurfonluu/stochopy/blob/master/CODE_OF_CONDUCT.rst>`__ which you agree to abide by when contributing.
 
+Related projects
+----------------
+
+- `stochopy-viewer <https://github.com/keurfonluu/stochopy-viewer>`__: Graphical User Interface (GUI) for **stochopy**.
+
 .. |License| image:: https://img.shields.io/github/license/keurfonluu/stochopy
    :target: https://github.com/keurfonluu/stochopy/blob/master/LICENSE
 
