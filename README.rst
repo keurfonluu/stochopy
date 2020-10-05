@@ -31,7 +31,7 @@ Stochastic optimizers:
 Parallel backends:
 
 - `joblib <https://github.com/joblib/joblib>`__ (``threading`` and ``loky``),
-- `mpi4py <https://bitbucket.org/mpi4py/mpi4py/src/master/>`__ (``mpi``).
+- `mpi4py <https://github.com/mpi4py/mpi4py>`__ (``mpi``).
 
 Installation
 ------------
