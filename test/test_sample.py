@@ -1,6 +1,5 @@
-import pytest
-
 import helpers
+import pytest
 
 
 @pytest.mark.parametrize("options, xref", [({}, [-1.6315912, 2.60020735])])

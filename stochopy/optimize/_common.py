@@ -65,7 +65,9 @@ def optimizer(optfun):
                                 fmpi[i] = fun(x[i], *args)
                             mpi_comm.Barrier()
 
-                            mpi_comm.Allreduce([fmpi, mpi_double], [f, mpi_double], op=MPI.SUM)
+                            mpi_comm.Allreduce(
+                                [fmpi, mpi_double], [f, mpi_double], op=MPI.SUM
+                            )
 
                             return f
 
