@@ -33,7 +33,7 @@ jobs:
         pip install coverage
         coverage run -m pytest
     - name: Submit coverage
-      if: ${{ matrix.python-version == '3.8' }}
+      if: ${{ matrix.python-version == '3.9' }}
       run: |
         pip install codecov
         codecov --token=${{ secrets.CODECOV_TOKEN }}
