@@ -1,6 +1,6 @@
 import numpy
 
-from .._common import messages, run
+from .._common import messages, optimizer
 from .._helpers import OptimizeResult, register
 from ._constraints import _constraints_map
 
@@ -123,13 +123,18 @@ def minimize(
         ftol,
         return_all,
     )
-    res = run(cmaes, fun, args, True, workers, backend, optargs)
+    res = cmaes(fun, args, True, workers, backend, *optargs)
 
     return res
 
 
+@optimizer
 def cmaes(
     funstd,
+    args,
+    sync,
+    workers,
+    backend,
     bounds,
     x0,
     maxiter,

@@ -1,6 +1,6 @@
 import numpy
 
-from .._common import lhs, messages, run, selection_async, selection_sync
+from .._common import lhs, messages, optimizer, selection_async, selection_sync
 from .._helpers import OptimizeResult, register
 from ._constraints import _constraints_map
 
@@ -158,18 +158,22 @@ def minimize(
         c2,
         gamma,
         constraints,
-        sync,
         xtol,
         ftol,
         return_all,
     )
-    res = run(cpso, fun, args, sync, workers, backend, optargs)
+    res = cpso(fun, args, sync, workers, backend, *optargs)
 
     return res
 
 
+@optimizer
 def cpso(
     fun,
+    args,
+    sync,
+    workers,
+    backend,
     bounds,
     x0,
     maxiter,
@@ -179,7 +183,6 @@ def cpso(
     c2,
     gamma,
     constraints,
-    sync,
     xtol,
     ftol,
     return_all,

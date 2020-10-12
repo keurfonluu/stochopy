@@ -1,6 +1,6 @@
 import numpy
 
-from .._common import lhs, messages, run, selection_async, selection_sync
+from .._common import lhs, messages, optimizer, selection_async, selection_sync
 from .._helpers import OptimizeResult, register
 from ._constraints import _constraints_map
 from ._strategy import _strategy_map
@@ -152,18 +152,22 @@ def minimize(
         CR,
         mut,
         constraints,
-        sync,
         xtol,
         ftol,
         return_all,
     )
-    res = run(de, fun, args, sync, workers, backend, optargs)
+    res = de(fun, args, sync, workers, backend, *optargs)
 
     return res
 
 
+@optimizer
 def de(
     fun,
+    args,
+    sync,
+    workers,
+    backend,
     bounds,
     x0,
     maxiter,
@@ -172,7 +176,6 @@ def de(
     CR,
     mut,
     constraints,
-    sync,
     xtol,
     ftol,
     return_all,

@@ -1,3 +1,5 @@
+from functools import wraps
+
 import numpy
 from joblib import Parallel, delayed
 
@@ -22,78 +24,84 @@ messages = {
 }
 
 
-def run(optimizer, fun, args, sync, workers, backend, optargs=()):
-    """Run an optimizer with the selected backend."""
-    backend = backend if backend else "threading"
+def optimizer(optfun):
+    """Decorate an optimizer."""
 
-    if backend in prefer and workers not in {0, 1}:
-        with Parallel(n_jobs=workers, prefer=prefer[backend]) as parallel:
-            fun = wrapfun(fun, args, sync, backend, parallel)
-            res = optimizer(fun, *optargs)
+    @wraps(optfun)
+    def decorator(fun, args, sync, workers, backend, *optargs):
+        """Run an optimizer with selected backend."""
 
-    else:
-        parallel = backend == "mpi"
-        fun = wrapfun(fun, args, sync, backend, parallel)
-        res = optimizer(fun, *optargs)
+        def wrapper(fun, args, sync, backend, parallel):
+            """Wrap an objective function."""
+            if sync:
+                if parallel:
+                    if backend in prefer:
+                        fun = delayed(fun)
 
-    return res
+                        def wrapper(x):
+                            f = parallel(fun(xx, *args) for xx in x)
+                            return numpy.array(f)
 
+                    elif backend == "mpi":
+                        try:
+                            from mpi4py import MPI
+                        except ImportError:
+                            raise ImportError(
+                                "parallelization using MPI requires mpi4py to be installed"
+                            )
 
-def wrapfun(fun, args, sync, backend, parallel):
-    """Wrap an objective function."""
-    if sync:
-        if parallel:
-            if backend in prefer:
-                fun = delayed(fun)
+                        mpi_comm = MPI.COMM_WORLD
+                        mpi_rank = mpi_comm.Get_rank()
+                        mpi_size = mpi_comm.Get_size()
+                        mpi_double = MPI.DOUBLE
 
-                def wrapper(x):
-                    f = parallel(fun(xx, *args) for xx in x)
-                    return numpy.array(f)
+                        def wrapper(x):
+                            popsize = len(x)
+                            f = numpy.zeros(popsize)
+                            fmpi = numpy.zeros(popsize)
 
-            elif backend == "mpi":
-                try:
-                    from mpi4py import MPI
-                except ImportError:
-                    raise ImportError(
-                        "parallelization using MPI requires mpi4py to be installed"
-                    )
+                            mpi_comm.Bcast([x, mpi_double], root=0)
+                            for i in numpy.arange(mpi_rank, popsize, mpi_size):
+                                fmpi[i] = fun(x[i], *args)
+                            mpi_comm.Barrier()
 
-                mpi_comm = MPI.COMM_WORLD
-                mpi_rank = mpi_comm.Get_rank()
-                mpi_size = mpi_comm.Get_size()
-                mpi_double = MPI.DOUBLE
+                            mpi_comm.Allreduce([fmpi, mpi_double], [f, mpi_double], op=MPI.SUM)
 
-                def wrapper(x):
-                    popsize = len(x)
-                    f = numpy.zeros(popsize)
-                    fmpi = numpy.zeros(popsize)
+                            return f
 
-                    mpi_comm.Bcast([x, mpi_double], root=0)
-                    for i in numpy.arange(mpi_rank, popsize, mpi_size):
-                        fmpi[i] = fun(x[i], *args)
-                    mpi_comm.Barrier()
+                    else:
+                        raise ValueError(f"unknown backend '{backend}'")
 
-                    mpi_comm.Allreduce([fmpi, mpi_double], [f, mpi_double], op=MPI.SUM)
+                else:
 
-                    return f
+                    def wrapper(x):
+                        return numpy.array([fun(xx, *args) for xx in x])
 
             else:
-                raise ValueError(f"unknown backend '{backend}'")
+
+                def wrapper(x):
+                    if x.ndim == 2:
+                        return numpy.array([fun(xx, *args) for xx in x])
+                    else:
+                        return fun(x, *args)
+
+            return wrapper
+
+        backend = backend if backend else "threading"
+
+        if backend in prefer and workers not in {0, 1}:
+            with Parallel(n_jobs=workers, prefer=prefer[backend]) as parallel:
+                fun = wrapper(fun, args, sync, backend, parallel)
+                res = optfun(fun, args, sync, workers, backend, *optargs)
 
         else:
+            parallel = backend == "mpi"
+            fun = wrapper(fun, args, sync, backend, parallel)
+            res = optfun(fun, args, sync, workers, backend, *optargs)
 
-            def wrapper(x):
-                return numpy.array([fun(xx, *args) for xx in x])
+        return res
 
-    else:
-
-        def wrapper(x):
-            if x.ndim == 2:
-                return numpy.array([fun(xx, *args) for xx in x])
-            else:
-                return fun(x, *args)
-
-    return wrapper
+    return decorator
 
 
 def lhs(popsize, ndim, bounds=None):

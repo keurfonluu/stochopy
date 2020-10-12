@@ -1,6 +1,6 @@
 import numpy
 
-from .._common import messages, run
+from .._common import messages, optimizer
 from .._helpers import OptimizeResult, register
 from ..cmaes._cmaes import converge
 from ..cmaes._constraints import _constraints_map
@@ -124,13 +124,18 @@ def minimize(
         ftol,
         return_all,
     )
-    res = run(vdcma, fun, args, True, workers, backend, optargs)
+    res = vdcma(fun, args, True, workers, backend, *optargs)
 
     return res
 
 
+@optimizer
 def vdcma(
     funstd,
+    args,
+    sync,
+    workers,
+    backend,
     bounds,
     x0,
     maxiter,
