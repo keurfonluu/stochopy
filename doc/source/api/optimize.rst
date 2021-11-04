@@ -28,6 +28,11 @@ Differential Evolution
 
 .. autofunction:: stochopy.optimize.de
 
+Neighborhood Algorithm
+**********************
+
+.. autofunction:: stochopy.optimize.na
+
 Particle Swarm Optimization
 ***************************
 
