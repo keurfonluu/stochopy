@@ -20,7 +20,7 @@ def optimize(method, options, xref):
     x = stochopy.optimize.minimize(fun, bounds, x0=x0, options=options, method=method)
 
     assert numpy.allclose(xref, x.x)
-    if options["constraints"] is not None:
+    if "constraints" in options and options["constraints"] is not None:
         assert numpy.all(x.xall + 1.0e-15 >= -5.12)
         assert numpy.all(x.xall - 1.0e-15 <= 5.12)
 
