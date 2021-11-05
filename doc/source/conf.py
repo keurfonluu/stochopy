@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath(".../"))
 import stochopy
 
 project = "stochopy"
-copyright = "2020, Keurfon Luu"
+copyright = "2021, Keurfon Luu"
 author = "Keurfon Luu"
 
 version = stochopy.__version__
@@ -42,7 +42,6 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
     "sphinxarg.ext",
-    "sphinxcontrib.bibtex",
     "sphinx_gallery.gen_gallery",
 ]
 
@@ -123,10 +122,19 @@ autoclass_content = "both"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_book_theme"
 html_theme_path = [
     "_themes",
 ]
+
+html_theme_options = {
+    "repository_url": "https://github.com/keurfonluu/stochopy",
+    "repository_branch": "master",
+    "path_to_docs": "doc/source",
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "use_edit_page_button": True,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
