@@ -205,7 +205,7 @@ def na(
 def mutation(X, Xall, popsize, ndim, nr, lower, upper):
     """
     Update population.
-    
+
     Note
     ----
     Code adapted from <https://github.com/keithfma/neighborhood/blob/master/neighborhood/search.py>
