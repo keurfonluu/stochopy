@@ -224,15 +224,11 @@ def mutation(X, Xall, popsize, ndim, nr, lower, upper):
         for j in range(ndim):
             lim = 0.5 * (Xall[k, j] + U[:, j] + (d1 - d2) / (Xall[k, j] - U[:, j]))
 
-            try:
-                low = max(0.0, lim[lim <= V[j]].max())
-            except ValueError:
-                low = 0.0
+            idx = lim <= V[j]
+            low = max(lim[idx].max(), 0.0) if idx.size else 0.0
 
-            try:
-                high = min(1.0, lim[lim >= V[j]].min())
-            except ValueError:
-                high = 1.0
+            idx = lim >= V[j]
+            high = min(lim[idx].min(), 1.0) if idx.size else 1.0
 
             V[j] = numpy.random.uniform(low, high)
 
