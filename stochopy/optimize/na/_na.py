@@ -121,7 +121,7 @@ def minimize(
 
 @optimizer
 def na(
-    fun,
+    funnorm,
     args,
     sync,
     workers,
@@ -139,11 +139,18 @@ def na(
     ndim = len(bounds)
     lower, upper = numpy.transpose(bounds)
 
+    # Normalize and unnormalize
+    normalize = lambda x: (x - lower) / (upper - lower)
+    unnormalize = lambda x: x * (upper - lower) + lower
+
+    fun = lambda x: funnorm(unnormalize(x))
+
     # Number of resampling
     nr = max(2, int(nrperc * popsize))
 
     # Initial population
     X = x0 if x0 is not None else lhs(popsize, ndim, bounds)
+    X = normalize(X)
     pbest = X.copy()
 
     # Evaluate initial population
@@ -162,7 +169,7 @@ def na(
     if return_all:
         xall = numpy.empty((maxiter, popsize, ndim))
         funall = numpy.empty((maxiter, popsize))
-        xall[0] = X.copy()
+        xall[0] = unnormalize(X)
         funall[0] = pfit.copy()
 
     # Iterate until one of the termination criterion is satisfied
@@ -172,7 +179,7 @@ def na(
         it += 1
 
         # Mutation
-        X = mutation(X, Xall, popsize, ndim, nr, lower, upper)
+        X = mutation(X, Xall, popsize, ndim, nr)
 
         # Selection
         gbest, gfit, pfit, status = selection_sync(
@@ -181,13 +188,13 @@ def na(
         Xall, Xallfit = stack_and_sort(X, Xall, pfit, Xallfit)
 
         if return_all:
-            xall[it - 1] = X.copy()
+            xall[it - 1] = unnormalize(X.copy())
             funall[it - 1] = pfit.copy()
 
         converged = status is not None
 
     res = OptimizeResult(
-        x=gbest,
+        x=unnormalize(gbest),
         success=status >= 0,
         status=status,
         message=messages[status],
@@ -202,7 +209,7 @@ def na(
     return res
 
 
-def mutation(X, Xall, popsize, ndim, nr, lower, upper):
+def mutation(X, Xall, popsize, ndim, nr):
     """
     Update population.
 
@@ -211,8 +218,6 @@ def mutation(X, Xall, popsize, ndim, nr, lower, upper):
     Code adapted from <https://github.com/keithfma/neighborhood/blob/master/neighborhood/search.py>
 
     """
-    Xall = (Xall - lower) / (upper - lower)
-
     for i in range(popsize):
         k = i % nr
         U = numpy.delete(Xall, k, axis=0)
@@ -225,10 +230,10 @@ def mutation(X, Xall, popsize, ndim, nr, lower, upper):
             lim = 0.5 * (Xall[k, j] + U[:, j] + (d1 - d2) / (Xall[k, j] - U[:, j]))
 
             idx = lim <= V[j]
-            low = max(lim[idx].max(), 0.0) if idx.size else 0.0
+            low = max(lim[idx].max(), 0.0) if idx.sum() else 0.0
 
             idx = lim >= V[j]
-            high = min(lim[idx].min(), 1.0) if idx.size else 1.0
+            high = min(lim[idx].min(), 1.0) if idx.sum() else 1.0
 
             V[j] = numpy.random.uniform(low, high)
 
@@ -236,7 +241,7 @@ def mutation(X, Xall, popsize, ndim, nr, lower, upper):
                 d1 += (Xall[k, j] - V[j]) ** 2 - (Xall[k, j + 1] - V[j + 1]) ** 2
                 d2 += (U[:, j] - V[j]) ** 2 - (U[:, j + 1] - V[j + 1]) ** 2
 
-        X[i] = V * (upper - lower) + lower
+        X[i] = V
 
     return X
 
