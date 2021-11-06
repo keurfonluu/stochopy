@@ -1,7 +1,7 @@
 stochopy
 ========
 
-|License| |Stars| |Pyversions| |Version| |Downloads| |Code style: black| |Codacy Badge| |Codecov| |Build| |Travis|
+|License| |Stars| |Pyversions| |Version| |Downloads| |Code style: black| |Codacy Badge| |Codecov| |Build| |Travis| |DOI|
 
 **stochopy** provides functions for sampling or optimizing objective functions with or without constraints. Its API is directly inspired by **scipy**'s own optimization submodule which should make the switch from one module to another straightforward.
 
@@ -25,6 +25,7 @@ Stochastic optimizers:
 -  Competitive Particle Swarm Optimization (CPSO),
 -  Covariance Matrix Adaptation - Evolution Strategy (CMA-ES),
 -  Differential Evolution (DE),
+-  Neighborhood Algorithm (NA),
 -  Particle Swarm Optimization (PSO),
 -  VD-CMA.
 
@@ -59,7 +60,7 @@ Documentation
 
 Refer to the online `documentation <https://keurfonluu.github.io/stochopy/>`__ for detailed description of the API and examples.
 
-Alternatively, the documentation can be built using `Sphinx <https://www.sphinx-doc.org/en/master/>`__
+Alternatively, the documentation can be built using `Sphinx <https://www.sphinx-doc.org/en/master/>`__:
 
 .. code:: bash
 
@@ -137,6 +138,9 @@ Related projects
 
 .. |Codecov| image:: https://img.shields.io/codecov/c/github/keurfonluu/stochopy.svg?style=flat
    :target: https://codecov.io/gh/keurfonluu/stochopy
+
+.. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4058008.svg?style=flat
+   :target: https://doi.org/10.5281/zenodo.4058008
 
 .. |Build| image:: https://img.shields.io/github/workflow/status/keurfonluu/stochopy/Python%20package
    :target: https://github.com/keurfonluu/stochopy
