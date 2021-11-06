@@ -146,7 +146,7 @@ def na(
     fun = lambda x: funnorm(unnormalize(x))
 
     # Number of resampling
-    nr = max(2, int(nrperc * popsize))
+    nr = max(1, int(nrperc * popsize))
 
     # Initial population
     X = x0 if x0 is not None else lhs(popsize, ndim, bounds)
@@ -162,8 +162,9 @@ def na(
     gfit = pbestfit[gbidx]
     gbest = X[gbidx].copy()
 
-    # Store and rank all models sampled
-    Xall, Xallfit = stack_and_sort(X, numpy.empty((0, ndim)), pfit, [])
+    # Store all models sampled
+    Xall = X.copy()
+    Xallfit = pfit.copy()
 
     # Initialize arrays
     if return_all:
@@ -179,13 +180,14 @@ def na(
         it += 1
 
         # Mutation
-        X = mutation(X, Xall, popsize, ndim, nr)
+        X = mutation(Xall, Xallfit, popsize, ndim, nr)
 
         # Selection
         gbest, gfit, pfit, status = selection_sync(
             it, X, gbest, pbest, pbestfit, maxiter, xtol, ftol, fun
         )
-        Xall, Xallfit = stack_and_sort(X, Xall, pfit, Xallfit)
+        Xall = numpy.vstack((X, Xall))
+        Xallfit = numpy.concatenate((pfit, Xallfit))
 
         if return_all:
             xall[it - 1] = unnormalize(X.copy())
@@ -209,7 +211,7 @@ def na(
     return res
 
 
-def mutation(X, Xall, popsize, ndim, nr):
+def mutation(Xall, Xallfit, popsize, ndim, nr):
     """
     Update population.
 
@@ -218,41 +220,33 @@ def mutation(X, Xall, popsize, ndim, nr):
     Code adapted from <https://github.com/keithfma/neighborhood/blob/master/neighborhood/search.py>
 
     """
+    X = numpy.empty((popsize, ndim))
+
+    ix = Xallfit.argsort()[:nr]
     for i in range(popsize):
-        k = i % nr
+        k = ix[i % nr]
+        X[i] = Xall[k].copy()
         U = numpy.delete(Xall, k, axis=0)
-        V = Xall[k].copy()
 
         d1 = 0.0
-        d2 = ((U[:, 1:] - V[1:]) ** 2).sum(axis=1)
+        d2 = ((U[:, 1:] - X[i, 1:]) ** 2).sum(axis=1)
 
         for j in range(ndim):
             lim = 0.5 * (Xall[k, j] + U[:, j] + (d1 - d2) / (Xall[k, j] - U[:, j]))
 
-            idx = lim <= V[j]
+            idx = lim <= X[i, j]
             low = max(lim[idx].max(), 0.0) if idx.sum() else 0.0
 
-            idx = lim >= V[j]
+            idx = lim >= X[i, j]
             high = min(lim[idx].min(), 1.0) if idx.sum() else 1.0
 
-            V[j] = numpy.random.uniform(low, high)
+            X[i, j] = numpy.random.uniform(low, high)
 
             if j < ndim - 1:
-                d1 += (Xall[k, j] - V[j]) ** 2 - (Xall[k, j + 1] - V[j + 1]) ** 2
-                d2 += (U[:, j] - V[j]) ** 2 - (U[:, j + 1] - V[j + 1]) ** 2
-
-        X[i] = V
+                d1 += (Xall[k, j] - X[i, j]) ** 2 - (Xall[k, j + 1] - X[i, j + 1]) ** 2
+                d2 += (U[:, j] - X[i, j]) ** 2 - (U[:, j + 1] - X[i, j + 1]) ** 2
 
     return X
-
-
-def stack_and_sort(X, Xall, pfit, Xallfit):
-    """Store and rank all models sampled."""
-    Xall = numpy.vstack((X, Xall))
-    Xallfit = numpy.concatenate((pfit, Xallfit))
-    idx = Xallfit.argsort()
-
-    return Xall[idx], Xallfit[idx]
 
 
 register("na", minimize)
