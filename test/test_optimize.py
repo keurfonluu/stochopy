@@ -82,7 +82,7 @@ def test_de(options, xref):
     helpers.optimize_parallel("de", options, xref)
 
 
-@pytest.mark.parametrize("options, xref", [({}, [1.14551553, 1.31328882])])
+@pytest.mark.parametrize("options, xref", [({}, [1.14849912, 1.31885465])])
 def test_na(options, xref):
     options.update({"nrperc": 0.5})
     helpers.optimize_parallel("na", options, xref)
