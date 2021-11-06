@@ -61,6 +61,7 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
          - 'cmaes'
          - 'cpso'
          - 'de'
+         - 'na'
          - 'pso'
          - 'vdcma'
 
