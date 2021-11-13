@@ -122,19 +122,21 @@ autoclass_content = "both"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_book_theme"
+import pydata_sphinx_theme
+
+html_theme = "pydata_sphinx_theme"
 html_theme_path = [
     "_themes",
 ]
 
-html_theme_options = {
-    "repository_url": "https://github.com/keurfonluu/stochopy",
-    "repository_branch": "master",
-    "path_to_docs": "doc/source",
-    "use_repository_button": True,
-    "use_issues_button": True,
-    "use_edit_page_button": True,
-}
+# html_theme_options = {
+#     "repository_url": "https://github.com/keurfonluu/stochopy",
+#     "repository_branch": "master",
+#     "path_to_docs": "doc/source",
+#     "use_repository_button": True,
+#     "use_issues_button": True,
+#     "use_edit_page_button": True,
+# }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
