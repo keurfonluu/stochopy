@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 import stochopy
 
@@ -19,10 +19,10 @@ def optimize(method, options, xref):
         x0 = None
     x = stochopy.optimize.minimize(fun, bounds, x0=x0, options=options, method=method)
 
-    assert numpy.allclose(xref, x.x)
+    assert np.allclose(xref, x.x)
     if "constraints" in options and options["constraints"] is not None:
-        assert numpy.all(x.xall + 1.0e-15 >= -5.12)
-        assert numpy.all(x.xall - 1.0e-15 <= 5.12)
+        assert np.all(x.xall + 1.0e-15 >= -5.12)
+        assert np.all(x.xall - 1.0e-15 <= 5.12)
 
 
 def optimize_parallel(method, options, xref):
@@ -41,4 +41,4 @@ def sample(method, options, xref):
     fun, bounds = rosenbrock()
     x = stochopy.sample.sample(fun, bounds, options=options, method=method)
 
-    assert numpy.allclose(xref, x.x)
+    assert np.allclose(xref, x.x)

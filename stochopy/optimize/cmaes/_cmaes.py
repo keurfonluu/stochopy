@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._common import messages, optimizer
 from .._helpers import OptimizeResult, register
@@ -94,12 +94,12 @@ def minimize(
         raise TypeError()
 
     # Dimensionality and search space
-    if numpy.ndim(bounds) != 2:
+    if np.ndim(bounds) != 2:
         raise ValueError()
 
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 1 or len(x0) != len(bounds):
+        if np.ndim(x0) != 1 or len(x0) != len(bounds):
             raise ValueError()
 
     # CMA-ES parameters
@@ -111,7 +111,7 @@ def minimize(
 
     # Seed
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
 
     # Callback
     if callback is not None and not hasattr(callback, "__call__"):
@@ -157,7 +157,7 @@ def cmaes(
 ):
     """Optimize with CMA-ES."""
     ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
+    lower, upper = np.transpose(bounds)
 
     # Standardize and unstandardize
     xm = 0.5 * (upper + lower)
@@ -172,46 +172,46 @@ def cmaes(
         cons = _constraints_map[constraints]
 
     # Initial mean
-    xmean = numpy.random.uniform(-1.0, 1.0, ndim) if x0 is None else standardize(x0)
-    xold = numpy.empty(ndim)
+    xmean = np.random.uniform(-1.0, 1.0, ndim) if x0 is None else standardize(x0)
+    xold = np.empty(ndim)
 
     # Number of parents
     mu = int(muperc * popsize)
 
     # Strategy parameter setting: Selection
-    weights = numpy.log(mu + 0.5) - numpy.log(numpy.arange(1, mu + 1))
+    weights = np.log(mu + 0.5) - np.log(np.arange(1, mu + 1))
     weights /= weights.sum()
-    mueff = weights.sum() ** 2 / numpy.square(weights).sum()
+    mueff = weights.sum() ** 2 / np.square(weights).sum()
 
     # Strategy parameter setting: Adaptation
     cc = (4.0 + mueff / ndim) / (ndim + 4.0 + 2.0 * mueff / ndim)
     cs = (mueff + 2.0) / (ndim + mueff + 5.0)
     c1 = 2.0 / ((ndim + 1.3) ** 2 + mueff)
     cmu = min(1.0 - c1, 2.0 * (mueff - 2.0 + 1.0 / mueff) / ((ndim + 2.0) ** 2 + mueff))
-    damps = 1.0 + 2.0 * max(0.0, numpy.sqrt((mueff - 1.0) / (ndim + 1.0)) - 1.0) + cs
+    damps = 1.0 + 2.0 * max(0.0, np.sqrt((mueff - 1.0) / (ndim + 1.0)) - 1.0) + cs
 
     # Initialize dynamic (internal) strategy parameters and constants
-    pc = numpy.zeros(ndim)
-    ps = numpy.zeros(ndim)
-    B = numpy.eye(ndim)
-    D = numpy.ones(ndim)
-    C = numpy.eye(ndim)
-    invsqrtC = numpy.eye(ndim)
-    chind = numpy.sqrt(ndim) * (1.0 - 1.0 / (4.0 * ndim) + 1.0 / (21.0 * ndim ** 2))
+    pc = np.zeros(ndim)
+    ps = np.zeros(ndim)
+    B = np.eye(ndim)
+    D = np.ones(ndim)
+    C = np.eye(ndim)
+    invsqrtC = np.eye(ndim)
+    chind = np.sqrt(ndim) * (1.0 - 1.0 / (4.0 * ndim) + 1.0 / (21.0 * ndim ** 2))
 
     # Initialize boundaries weights
-    bnd_weights = numpy.zeros(ndim)
-    dfithist = numpy.ones(1)
+    bnd_weights = np.zeros(ndim)
+    dfithist = np.ones(1)
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((maxiter, popsize, ndim))
-        funall = numpy.empty((maxiter, popsize))
+        xall = np.empty((maxiter, popsize, ndim))
+        funall = np.empty((maxiter, popsize))
 
     # (mu, lambda)-CMA-ES
     nfev = 0
     eigeneval = 0
-    arbestfitness = numpy.zeros(maxiter)
+    arbestfitness = np.zeros(maxiter)
     ilim = int(10.0 + 30.0 * ndim / popsize)
     insigma = sigma
     validfitval = False
@@ -223,9 +223,9 @@ def cmaes(
         it += 1
 
         # Generate lambda offsprings
-        arx = numpy.array(
+        arx = np.array(
             [
-                xmean + sigma * numpy.dot(B, D * numpy.random.randn(ndim))
+                xmean + sigma * np.dot(B, D * np.random.randn(ndim))
                 for i in range(popsize)
             ]
         )
@@ -239,7 +239,7 @@ def cmaes(
                 xmean,
                 xold,
                 sigma,
-                numpy.diag(C),
+                np.diag(C),
                 mueff,
                 it,
                 bnd_weights,
@@ -257,48 +257,48 @@ def cmaes(
             funall[it - 1] = arfitness.copy()
 
         # Sort by fitness and compute weighted mean into xmean
-        arindex = numpy.argsort(arfitness)
+        arindex = np.argsort(arfitness)
         xold = xmean.copy()
-        xmean = numpy.dot(weights, arx[arindex[:mu], :])
+        xmean = np.dot(weights, arx[arindex[:mu], :])
 
         # Save best fitness
         arbestfitness[it - 1] = arfitness[arindex[0]].copy()
 
         # Cumulation
-        ps = (1.0 - cs) * ps + numpy.sqrt(cs * (2.0 - cs) * mueff) * numpy.dot(
+        ps = (1.0 - cs) * ps + np.sqrt(cs * (2.0 - cs) * mueff) * np.dot(
             invsqrtC, xmean - xold
         ) / sigma
-        cond = numpy.linalg.norm(ps) / numpy.sqrt(
+        cond = np.linalg.norm(ps) / np.sqrt(
             1.0 - (1.0 - cs) ** (2.0 * nfev / popsize)
         ) / chind < 1.4 + 2.0 / (ndim + 1.0)
         pc *= 1.0 - cc
         pc += (
-            numpy.sqrt(cc * (2.0 - cc) * mueff) * (xmean - xold) / sigma
+            np.sqrt(cc * (2.0 - cc) * mueff) * (xmean - xold) / sigma
             if cond
             else 0.0
         )
 
         # Adapt covariance matrix C
-        artmp = (arx[arindex[:mu], :] - numpy.tile(xold, (mu, 1))) / sigma
+        artmp = (arx[arindex[:mu], :] - np.tile(xold, (mu, 1))) / sigma
         tmp = 0.0 if cond else c1 * cc * (2.0 - cc) * C
         C *= 1.0 - c1 - cmu
-        C += cmu * numpy.dot(numpy.dot(artmp.T, numpy.diag(weights)), artmp)
-        C += c1 * numpy.outer(pc, pc)
+        C += cmu * np.dot(np.dot(artmp.T, np.diag(weights)), artmp)
+        C += c1 * np.outer(pc, pc)
         C += tmp
 
         # Adapt step size sigma
-        sigma *= numpy.exp((cs / damps) * (numpy.linalg.norm(ps) / chind - 1.0))
+        sigma *= np.exp((cs / damps) * (np.linalg.norm(ps) / chind - 1.0))
 
         # Diagonalization of C
         if nfev - eigeneval > popsize / (c1 + cmu) / ndim / 10.0:
             eigeneval = nfev
-            C = numpy.triu(C) + numpy.triu(C, 1).T
-            D, B = numpy.linalg.eigh(C)
-            idx = numpy.argsort(D)
+            C = np.triu(C) + np.triu(C, 1).T
+            D, B = np.linalg.eigh(C)
+            idx = np.argsort(D)
             D = D[idx]
             B = B[:, idx]
-            D = numpy.sqrt(D)
-            invsqrtC = numpy.dot(numpy.dot(B, numpy.diag(1.0 / D)), B.T)
+            D = np.sqrt(D)
+            invsqrtC = np.dot(np.dot(B, np.diag(1.0 / D)), B.T)
 
         # Check convergence
         status = converge(
@@ -316,7 +316,7 @@ def cmaes(
             pc,
             xtol,
             ftol,
-            numpy.diag(C),
+            np.diag(C),
             B,
             D,
         )
@@ -370,15 +370,15 @@ def converge(
 ):
     """Check convergence status at the end of an iteration."""
     status = None
-    i = int(numpy.floor(numpy.mod(it, ndim)))
-    sqdiagC = numpy.sqrt(diagC)
+    i = int(np.floor(np.mod(it, ndim)))
+    sqdiagC = np.sqrt(diagC)
 
     # Stop if maximum iteration is reached
     if it >= maxiter:
         status = -1
 
     # Stop if mean position changes less than xtol
-    elif numpy.linalg.norm(xold - xmean) <= xtol and arfitness[arindex[0]] < ftol:
+    elif np.linalg.norm(xold - xmean) <= xtol and arfitness[arindex[0]] < ftol:
         status = 0
 
     # Stop if fitness is less than ftol
@@ -386,7 +386,7 @@ def converge(
         status = 1
 
     # NoEffectAxis: stop if numerical precision problem
-    elif B is not None and (numpy.abs(0.1 * sigma * B[:, i] * D[i]) < 1.0e-10).all():
+    elif B is not None and (np.abs(0.1 * sigma * B[:, i] * D[i]) < 1.0e-10).all():
         status = -2
 
     # NoEffectCoord: stop if too low coordinate axis deviations
@@ -413,14 +413,14 @@ def converge(
     # TolFun: stop if fun-changes smaller than 1e-12
     elif (
         it > 2
-        and numpy.append(arfitness, arbestfitness).max()
-        - numpy.append(arfitness, arbestfitness).min()
+        and np.append(arfitness, arbestfitness).max()
+        - np.append(arfitness, arbestfitness).min()
         < 1.0e-12
     ):
         status = -7
 
     # TolX: stop if x-changes smaller than 1e-11 times initial sigma
-    elif (sigma * numpy.append(numpy.abs(pc), sqdiagC.max()) < 1.0e-11 * insigma).all():
+    elif (sigma * np.append(np.abs(pc), sqdiagC.max()) < 1.0e-11 * insigma).all():
         status = -8
 
     return status

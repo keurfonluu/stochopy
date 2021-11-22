@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._common import in_search_space
 from .._helpers import SampleResult, register
@@ -69,19 +69,19 @@ def sample(
         raise TypeError()
 
     # Dimensionality and search space
-    if numpy.ndim(bounds) != 2:
+    if np.ndim(bounds) != 2:
         raise ValueError()
 
     ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
+    lower, upper = np.transpose(bounds)
 
     # Initial guess x0
     if x0 is not None and len(x0) != ndim:
         raise ValueError()
 
     # Step size
-    if numpy.ndim(stepsize) == 0:
-        stepsize = numpy.full(ndim, stepsize)
+    if np.ndim(stepsize) == 0:
+        stepsize = np.full(ndim, stepsize)
 
     if len(stepsize) != ndim:
         raise ValueError()
@@ -96,16 +96,16 @@ def sample(
 
     # Seed
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
 
     # Callback
     if callback is not None and not hasattr(callback, "__call__"):
         raise ValueError()
 
     # Initialize arrays
-    xall = numpy.empty((maxiter, ndim))
-    funall = numpy.empty(maxiter)
-    xall[0] = x0 if x0 is not None else numpy.random.uniform(lower, upper)
+    xall = np.empty((maxiter, ndim))
+    funall = np.empty(maxiter)
+    xall[0] = x0 if x0 is not None else np.random.uniform(lower, upper)
     funall[0] = fun(xall[0], *args)
 
     # First iteration for callback
@@ -124,11 +124,11 @@ def sample(
     # Metropolis-Hastings algorithm
     i = 1
     n_accepted = 0
-    imin, fmin = 0, numpy.Inf
+    imin, fmin = 0, np.Inf
     while i < maxiter:
-        for j in numpy.arange(0, ndim, ndim_per_iter):
+        for j in np.arange(0, ndim, ndim_per_iter):
             jmax = min(ndim, j + ndim_per_iter - 1)
-            perturbation = numpy.random.randn(jmax - j + 1) * stepsize[j : jmax + 1]
+            perturbation = np.random.randn(jmax - j + 1) * stepsize[j : jmax + 1]
 
             xall[i] = xall[i - 1].copy()
             xall[i, j : jmax + 1] += perturbation
@@ -137,7 +137,7 @@ def sample(
             if in_search_space(xall[i], lower, upper, constraints):
                 funall[i] = fun(xall[i], *args)
                 log_alpha = min(0.0, funall[i - 1] - funall[i])
-                accept = log_alpha > numpy.log(numpy.random.rand())
+                accept = log_alpha > np.log(np.random.rand())
 
             if accept:
                 n_accepted += 1

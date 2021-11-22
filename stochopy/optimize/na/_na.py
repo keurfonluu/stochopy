@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._common import lhs, messages, optimizer, selection_sync
 from .._helpers import OptimizeResult, register
@@ -83,12 +83,12 @@ def minimize(
         raise TypeError()
 
     # Dimensionality and search space
-    if numpy.ndim(bounds) != 2:
+    if np.ndim(bounds) != 2:
         raise ValueError()
 
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != len(bounds):
+        if np.ndim(x0) != 2 or np.shape(x0)[1] != len(bounds):
             raise ValueError()
 
     # Population size
@@ -104,7 +104,7 @@ def minimize(
 
     # Seed
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
 
     # Callback
     if callback is not None and not hasattr(callback, "__call__"):
@@ -146,13 +146,13 @@ def na(
 ):
     """Optimize with Neighborhood Algorithm."""
     ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
+    lower, upper = np.transpose(bounds)
 
     # Normalize and unnormalize
     span = upper - lower
     span_mask = span > 0.0
-    normalize = lambda x: numpy.where(span_mask, (x - lower) / span, upper)
-    unnormalize = lambda x: numpy.where(span_mask, x * span + lower, upper)
+    normalize = lambda x: np.where(span_mask, (x - lower) / span, upper)
+    unnormalize = lambda x: np.where(span_mask, x * span + lower, upper)
 
     fun = lambda x: funnorm(unnormalize(x))
 
@@ -169,7 +169,7 @@ def na(
     pbestfit = pfit.copy()
 
     # Initial best solution
-    gbidx = numpy.argmin(pbestfit)
+    gbidx = np.argmin(pbestfit)
     gfit = pbestfit[gbidx]
     gbest = X[gbidx].copy()
 
@@ -179,8 +179,8 @@ def na(
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((maxiter, popsize, ndim))
-        funall = numpy.empty((maxiter, popsize))
+        xall = np.empty((maxiter, popsize, ndim))
+        funall = np.empty((maxiter, popsize))
         xall[0] = unnormalize(X)
         funall[0] = pfit.copy()
 
@@ -210,8 +210,8 @@ def na(
         gbest, gfit, pfit, status = selection_sync(
             it, X, gbest, pbest, pbestfit, maxiter, xtol, ftol, fun
         )
-        Xall = numpy.vstack((X, Xall))
-        Xallfit = numpy.concatenate((pfit, Xallfit))
+        Xall = np.vstack((X, Xall))
+        Xallfit = np.concatenate((pfit, Xallfit))
 
         if return_all:
             xall[it - 1] = unnormalize(X)
@@ -255,13 +255,13 @@ def mutation(Xall, Xallfit, popsize, ndim, nr):
     Code adapted from <https://github.com/keithfma/neighborhood/blob/master/neighborhood/search.py>
 
     """
-    X = numpy.empty((popsize, ndim))
+    X = np.empty((popsize, ndim))
 
     ix = Xallfit.argsort()[:nr]
     for i in range(popsize):
         k = ix[i % nr]
         X[i] = Xall[k].copy()
-        U = numpy.delete(Xall, k, axis=0)
+        U = np.delete(Xall, k, axis=0)
 
         d1 = 0.0
         d2 = ((U[:, 1:] - X[i, 1:]) ** 2).sum(axis=1)
@@ -275,7 +275,7 @@ def mutation(Xall, Xallfit, popsize, ndim, nr):
             idx = lim >= X[i, j]
             high = min(lim[idx].min(), 1.0) if idx.sum() else 1.0
 
-            X[i, j] = numpy.random.uniform(low, high)
+            X[i, j] = np.random.uniform(low, high)
 
             if j < ndim - 1:
                 d1 += (Xall[k, j] - X[i, j]) ** 2 - (Xall[k, j + 1] - X[i, j + 1]) ** 2

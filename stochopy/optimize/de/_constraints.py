@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 
 def NoConstraint(lower, upper):
@@ -19,9 +19,9 @@ def Random(lower, upper):
     """
 
     def cons(U):
-        return numpy.where(
-            numpy.logical_or(U < lower, U > upper),
-            numpy.random.uniform(lower, upper, U.shape),
+        return np.where(
+            np.logical_or(U < lower, U > upper),
+            np.random.uniform(lower, upper, U.shape),
             U,
         )
 

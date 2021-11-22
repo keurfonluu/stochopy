@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import helpers
 import pytest
 
@@ -27,6 +27,6 @@ def test_callback(method):
         global count
         count += 1
 
-    maxiter = numpy.random.randint(2, 10)
+    maxiter = np.random.randint(2, 10)
     _ = sample(rosenbrock, [[-5.12, 5.12]] * 2, method=method, options={"maxiter": maxiter}, callback=callback)
     assert count == maxiter

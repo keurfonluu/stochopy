@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import pytest
 
 import stochopy
@@ -17,7 +17,7 @@ import stochopy
     ],
 )
 def test_factory(fun, fref):
-    x = numpy.ones(10)
+    x = np.ones(10)
     f = fun(x)
 
-    assert numpy.allclose(fref, f)
+    assert np.allclose(fref, f)
