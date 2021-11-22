@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._common import in_search_space
 from .._helpers import SampleResult, register
@@ -19,6 +19,7 @@ def sample(
     seed=None,
     constraints=None,
     return_all=True,
+    callback=None,
 ):
     """
     Sample the variable space using the Metropolis-Hastings algorithm.
@@ -49,6 +50,8 @@ def sample(
 
     return_all : bool, optional, default True
         Set to True to return an array with shape (``maxiter``, ``ndim``) of all the samples.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(xk, SampleResult state)``, where ``xk`` is the current population and ``state`` is a :class:`stochopy.sample.SampleResult` object with the same fields as the ones from the return.
 
     Returns
     -------
@@ -66,19 +69,19 @@ def sample(
         raise TypeError()
 
     # Dimensionality and search space
-    if numpy.ndim(bounds) != 2:
+    if np.ndim(bounds) != 2:
         raise ValueError()
 
     ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
+    lower, upper = np.transpose(bounds)
 
     # Initial guess x0
     if x0 is not None and len(x0) != ndim:
         raise ValueError()
 
     # Step size
-    if numpy.ndim(stepsize) == 0:
-        stepsize = numpy.full(ndim, stepsize)
+    if np.ndim(stepsize) == 0:
+        stepsize = np.full(ndim, stepsize)
 
     if len(stepsize) != ndim:
         raise ValueError()
@@ -93,21 +96,34 @@ def sample(
 
     # Seed
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
+
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
 
     # Initialize arrays
-    xall = numpy.empty((maxiter, ndim))
-    funall = numpy.empty(maxiter)
-    xall[0] = x0 if x0 is not None else numpy.random.uniform(lower, upper)
+    xall = np.empty((maxiter, ndim))
+    funall = np.empty(maxiter)
+    xall[0] = x0 if x0 is not None else np.random.uniform(lower, upper)
     funall[0] = fun(xall[0], *args)
+
+    # First iteration for callback
+    if callback is not None:
+        res = SampleResult(x=xall[0], fun=funall[0], nit=1, accept_ratio=1.0)
+        if return_all:
+            res.update({"xall": xall[:1], "funall": funall[:1]})
+
+        callback(xall[0], res)
 
     # Metropolis-Hastings algorithm
     i = 1
     n_accepted = 0
+    imin, fmin = 0, np.Inf
     while i < maxiter:
-        for j in numpy.arange(0, ndim, ndim_per_iter):
+        for j in np.arange(0, ndim, ndim_per_iter):
             jmax = min(ndim, j + ndim_per_iter - 1)
-            perturbation = numpy.random.randn(jmax - j + 1) * stepsize[j : jmax + 1]
+            perturbation = np.random.randn(jmax - j + 1) * stepsize[j : jmax + 1]
 
             xall[i] = xall[i - 1].copy()
             xall[i, j : jmax + 1] += perturbation
@@ -116,25 +132,34 @@ def sample(
             if in_search_space(xall[i], lower, upper, constraints):
                 funall[i] = fun(xall[i], *args)
                 log_alpha = min(0.0, funall[i - 1] - funall[i])
-                accept = log_alpha > numpy.log(numpy.random.rand())
+                accept = log_alpha > np.log(np.random.rand())
 
             if accept:
                 n_accepted += 1
+                if funall[i] < fmin:
+                    imin, fmin = i, funall[i]
             else:
                 xall[i] = xall[i - 1]
                 funall[i] = funall[i - 1]
 
             i += 1
+            if callback is not None:
+                res = SampleResult(
+                    x=xall[imin], fun=funall[imin], nit=i, accept_ratio=n_accepted / i,
+                )
+                if return_all:
+                    res.update({"xall": xall[: i - 1], "funall": funall[: i - 1]})
+
+                callback(xall[i - 1], res)
+
             if i == maxiter:
                 break
 
-    idx = numpy.argmin(funall)
     res = SampleResult(
-        x=xall[idx], fun=funall[idx], nit=maxiter, accept_ratio=n_accepted / maxiter,
+        x=xall[imin], fun=fmin, nit=maxiter, accept_ratio=n_accepted / maxiter,
     )
     if return_all:
-        res["xall"] = xall
-        res["funall"] = funall
+        res.update({"xall": xall, "funall": funall})
 
     return res
 

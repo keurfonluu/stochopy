@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 
 def NoConstraint(lower, upper, sync):
@@ -45,7 +45,7 @@ def Shrink(lower, upper, sync):
             Xcand = X + V
             maskl = Xcand < lower
             masku = Xcand > upper
-            beta = numpy.array(
+            beta = np.array(
                 [shrink(x, v, ml, mu) for x, v, ml, mu in zip(X, V, maskl, masku)]
             )
             V *= beta[:, None]

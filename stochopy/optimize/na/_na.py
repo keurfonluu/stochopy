@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._common import lhs, messages, optimizer, selection_sync
 from .._helpers import OptimizeResult, register
@@ -22,6 +22,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    callback=True,
 ):
     """
     Minimize an objective function using Neighborhood Algorithm (NA).
@@ -59,6 +60,8 @@ def minimize(
 
     return_all : bool, optional, default False
         Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
     Returns
     -------
@@ -80,12 +83,12 @@ def minimize(
         raise TypeError()
 
     # Dimensionality and search space
-    if numpy.ndim(bounds) != 2:
+    if np.ndim(bounds) != 2:
         raise ValueError()
 
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != len(bounds):
+        if np.ndim(x0) != 2 or np.shape(x0)[1] != len(bounds):
             raise ValueError()
 
     # Population size
@@ -101,7 +104,11 @@ def minimize(
 
     # Seed
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
+
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
 
     # Run in serial or parallel
     optargs = (
@@ -113,6 +120,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        callback,
     )
     res = na(fun, args, True, workers, backend, *optargs)
 
@@ -134,14 +142,18 @@ def na(
     xtol,
     ftol,
     return_all,
+    callback,
 ):
     """Optimize with Neighborhood Algorithm."""
     ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
+    lower, upper = np.transpose(bounds)
 
     # Normalize and unnormalize
-    normalize = lambda x: (x - lower) / (upper - lower)
-    unnormalize = lambda x: x * (upper - lower) + lower
+    span = upper - lower
+    span_mask = span > 0.0
+    span[~span_mask] = 1.0  # Avoid zero division in normalize
+    normalize = lambda x: np.where(span_mask, (x - lower) / span, upper)
+    unnormalize = lambda x: np.where(span_mask, x * span + lower, upper)
 
     fun = lambda x: funnorm(unnormalize(x))
 
@@ -158,7 +170,7 @@ def na(
     pbestfit = pfit.copy()
 
     # Initial best solution
-    gbidx = numpy.argmin(pbestfit)
+    gbidx = np.argmin(pbestfit)
     gfit = pbestfit[gbidx]
     gbest = X[gbidx].copy()
 
@@ -168,10 +180,18 @@ def na(
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((maxiter, popsize, ndim))
-        funall = numpy.empty((maxiter, popsize))
+        xall = np.empty((maxiter, popsize, ndim))
+        funall = np.empty((maxiter, popsize))
         xall[0] = unnormalize(X)
         funall[0] = pfit.copy()
+
+    # First iteration for callback
+    if callback is not None:
+        res = OptimizeResult(x=unnormalize(gbest), fun=gfit, nfev=popsize, nit=1)
+        if return_all:
+            res.update({"xall": xall[:1], "funall": funall[:1]})
+
+        callback(unnormalize(X), res)
 
     # Iterate until one of the termination criterion is satisfied
     it = 1
@@ -180,20 +200,29 @@ def na(
         it += 1
 
         # Mutation
-        X = mutation(Xall, Xallfit, popsize, ndim, nr)
+        X = mutation(Xall, Xallfit, popsize, ndim, nr, span_mask)
 
         # Selection
         gbest, gfit, pfit, status = selection_sync(
             it, X, gbest, pbest, pbestfit, maxiter, xtol, ftol, fun
         )
-        Xall = numpy.vstack((X, Xall))
-        Xallfit = numpy.concatenate((pfit, Xallfit))
+        Xall = np.vstack((X, Xall))
+        Xallfit = np.concatenate((pfit, Xallfit))
 
         if return_all:
-            xall[it - 1] = unnormalize(X.copy())
+            xall[it - 1] = unnormalize(X)
             funall[it - 1] = pfit.copy()
 
         converged = status is not None
+
+        if callback is not None:
+            res = OptimizeResult(
+                x=unnormalize(gbest), fun=gfit, nfev=it * popsize, nit=it,
+            )
+            if return_all:
+                res.update({"xall": xall[:it], "funall": funall[:it]})
+
+            callback(unnormalize(X), res)
 
     res = OptimizeResult(
         x=unnormalize(gbest),
@@ -205,13 +234,12 @@ def na(
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:it]
-        res["funall"] = funall[:it]
+        res.update({"xall": xall[:it], "funall": funall[:it]})
 
     return res
 
 
-def mutation(Xall, Xallfit, popsize, ndim, nr):
+def mutation(Xall, Xallfit, popsize, ndim, nr, span_mask):
     """
     Update population.
 
@@ -220,18 +248,23 @@ def mutation(Xall, Xallfit, popsize, ndim, nr):
     Code adapted from <https://github.com/keithfma/neighborhood/blob/master/neighborhood/search.py>
 
     """
-    X = numpy.empty((popsize, ndim))
+    X = np.empty((popsize, ndim))
 
     ix = Xallfit.argsort()[:nr]
     for i in range(popsize):
         k = ix[i % nr]
         X[i] = Xall[k].copy()
-        U = numpy.delete(Xall, k, axis=0)
+        U = np.delete(Xall, k, axis=0)
 
         d1 = 0.0
         d2 = ((U[:, 1:] - X[i, 1:]) ** 2).sum(axis=1)
 
         for j in range(ndim):
+            if not span_mask[j]:
+                # Value does not matter as it will be fixed by unnormalize
+                X[i, j] = 0.0
+                continue
+
             lim = 0.5 * (Xall[k, j] + U[:, j] + (d1 - d2) / (Xall[k, j] - U[:, j]))
 
             idx = lim <= X[i, j]
@@ -240,7 +273,7 @@ def mutation(Xall, Xallfit, popsize, ndim, nr):
             idx = lim >= X[i, j]
             high = min(lim[idx].min(), 1.0) if idx.sum() else 1.0
 
-            X[i, j] = numpy.random.uniform(low, high)
+            X[i, j] = np.random.uniform(low, high)
 
             if j < ndim - 1:
                 d1 += (Xall[k, j] - X[i, j]) ** 2 - (Xall[k, j + 1] - X[i, j + 1]) ** 2

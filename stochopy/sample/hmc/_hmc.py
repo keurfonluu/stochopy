@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._common import in_search_space
 from .._helpers import SampleResult, register
@@ -21,6 +21,7 @@ def sample(
     finite_diff_abs_step=1.0e-4,
     constraints=None,
     return_all=True,
+    callback=None,
 ):
     """
     Sample the variable space using the Hamiltonian (Hybrid) Monte-Carlo algorithm.
@@ -57,6 +58,8 @@ def sample(
 
     return_all : bool, optional, default True
         Set to True to return an array with shape (``maxiter``, ``ndim``) of all the samples.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(xk, SampleResult state)``, where ``xk`` is the current population and ``state`` is a :class:`stochopy.sample.SampleResult` object with the same fields as the ones from the return.
 
     Returns
     -------
@@ -81,11 +84,11 @@ def sample(
     fun = count(fun)  # Wrap to count the number of function evaluations
 
     # Dimensionality and search space
-    if numpy.ndim(bounds) != 2:
+    if np.ndim(bounds) != 2:
         raise ValueError()
 
     ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
+    lower, upper = np.transpose(bounds)
 
     # Initial guess x0
     if x0 is not None and len(x0) != ndim:
@@ -96,8 +99,8 @@ def sample(
         raise ValueError()
 
     # Step size
-    if numpy.ndim(stepsize) == 0:
-        stepsize = numpy.full(ndim, stepsize)
+    if np.ndim(stepsize) == 0:
+        stepsize = np.full(ndim, stepsize)
 
     if len(stepsize) != ndim:
         raise ValueError()
@@ -115,19 +118,32 @@ def sample(
 
     # Seed
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
+
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
 
     # Initialize arrays
-    xall = numpy.empty((maxiter, ndim))
-    funall = numpy.empty(maxiter)
-    xall[0] = x0 if x0 is not None else numpy.random.uniform(lower, upper)
+    xall = np.empty((maxiter, ndim))
+    funall = np.empty(maxiter)
+    xall[0] = x0 if x0 is not None else np.random.uniform(lower, upper)
     funall[0] = fun(xall[0], *args)
+
+    # First iteration for callback
+    if callback is not None:
+        res = SampleResult(x=xall[0], fun=funall[0], nit=1, accept_ratio=1.0)
+        if return_all:
+            res.update({"xall": xall[:1], "funall": funall[:1]})
+
+        callback(xall[0], res)
 
     # Leap-frog algorithm
     n_accepted = 0
+    imin, fmin = 0, np.Inf
     for i in range(1, maxiter):
         q = xall[i - 1].copy()
-        p = numpy.random.randn(ndim)  # Random momentum
+        p = np.random.randn(ndim)  # Random momentum
         q0 = q.copy()
         p0 = p.copy()
 
@@ -141,22 +157,36 @@ def sample(
         accept = False
         if in_search_space(q, lower, upper, constraints):
             U0 = fun(q0, *args)
-            K0 = 0.5 * numpy.square(p0).sum()
+            K0 = 0.5 * np.square(p0).sum()
             U = fun(q, *args)
-            K = 0.5 * numpy.square(p).sum()
+            K = 0.5 * np.square(p).sum()
 
             log_alpha = min(0.0, U0 - U + K0 - K)
-            accept = log_alpha > numpy.log(numpy.random.rand())
+            accept = log_alpha > np.log(np.random.rand())
 
         if accept:
             n_accepted += 1
             xall[i] = q
             funall[i] = U
+            if funall[i] < fmin:
+                imin, fmin = i, funall[i]
         else:
             xall[i] = xall[i - 1]
             funall[i] = funall[i - 1]
 
-    idx = numpy.argmin(funall)
+        if callback is not None:
+            res = SampleResult(
+                x=xall[imin],
+                fun=funall[imin],
+                nit=i + 1,
+                accept_ratio=n_accepted / (i + 1),
+            )
+            if return_all:
+                res.update({"xall": xall[:i], "funall": funall[:i]})
+
+            callback(xall[i], res)
+
+    idx = np.argmin(funall)
     res = SampleResult(
         x=xall[idx],
         fun=funall[idx],
@@ -190,7 +220,7 @@ def numerical_gradient(x, fun, args, finite_diff_abs_step):
     x1 = x.copy()
     x2 = x.copy()
 
-    grad = numpy.empty(ndim)
+    grad = np.empty(ndim)
     for i in range(ndim):
         x1[i] -= finite_diff_abs_step
         x2[i] += finite_diff_abs_step

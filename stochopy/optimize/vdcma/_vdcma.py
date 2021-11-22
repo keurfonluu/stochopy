@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._common import messages, optimizer
 from .._helpers import OptimizeResult, register
@@ -26,6 +26,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    callback=None,
 ):
     """
     Minimize an objective function using VD-CMA.
@@ -71,6 +72,8 @@ def minimize(
 
     return_all : bool, optional, default False
         Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
     Returns
     -------
@@ -92,12 +95,12 @@ def minimize(
         raise TypeError()
 
     # Dimensionality and search space
-    if numpy.ndim(bounds) != 2:
+    if np.ndim(bounds) != 2:
         raise ValueError()
 
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 1 or len(x0) != len(bounds):
+        if np.ndim(x0) != 1 or len(x0) != len(bounds):
             raise ValueError()
 
     # VDCMA parameters
@@ -109,7 +112,11 @@ def minimize(
 
     # Seed
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
+
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
 
     # Run in serial or parallel
     optargs = (
@@ -123,6 +130,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        callback,
     )
     res = vdcma(fun, args, True, workers, backend, *optargs)
 
@@ -146,10 +154,11 @@ def vdcma(
     xtol,
     ftol,
     return_all,
+    callback,
 ):
     """Optimize with VD-CMA."""
     ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
+    lower, upper = np.transpose(bounds)
 
     # Standardize and unstandardize
     xm = 0.5 * (upper + lower)
@@ -164,16 +173,16 @@ def vdcma(
         cons = _constraints_map[constraints]
 
     # Initial mean
-    xmean = numpy.random.uniform(-1.0, 1.0, ndim) if x0 is None else standardize(x0)
-    xold = numpy.empty(ndim)
+    xmean = np.random.uniform(-1.0, 1.0, ndim) if x0 is None else standardize(x0)
+    xold = np.empty(ndim)
 
     # Number of parents
     mu = int(muperc * popsize)
 
     # Strategy parameter setting: Selection
-    weights = numpy.log(mu + 0.5) - numpy.log(numpy.arange(1, mu + 1))
+    weights = np.log(mu + 0.5) - np.log(np.arange(1, mu + 1))
     weights /= weights.sum()
-    mueff = weights.sum() ** 2 / numpy.square(weights).sum()
+    mueff = weights.sum() ** 2 / np.square(weights).sum()
 
     # Strategy parameter setting: Adaptation
     cc = (4.0 + mueff / ndim) / (ndim + 4.0 + 2.0 * mueff / ndim)
@@ -187,29 +196,29 @@ def vdcma(
     # Initialize dynamic (internal) strategy parameters and constants
     flg_injection = False
     cs = 0.3
-    ds = numpy.sqrt(ndim)
-    dx = numpy.zeros(ndim)
+    ds = np.sqrt(ndim)
+    dx = np.zeros(ndim)
     ps = 0.0
-    dvec = numpy.ones(ndim)
-    vvec = numpy.random.normal(0.0, 1.0, ndim) / numpy.sqrt(ndim)
-    norm_v2 = numpy.dot(vvec, vvec)
-    norm_v = numpy.sqrt(norm_v2)
+    dvec = np.ones(ndim)
+    vvec = np.random.normal(0.0, 1.0, ndim) / np.sqrt(ndim)
+    norm_v2 = np.dot(vvec, vvec)
+    norm_v = np.sqrt(norm_v2)
     vn = vvec / norm_v
     vnn = vn ** 2
-    pc = numpy.zeros(ndim)
+    pc = np.zeros(ndim)
 
     # Initialize boundaries weights
-    bnd_weights = numpy.zeros(ndim)
-    dfithist = numpy.ones(1)
+    bnd_weights = np.zeros(ndim)
+    dfithist = np.ones(1)
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((maxiter, popsize, ndim))
-        funall = numpy.empty((maxiter, popsize))
+        xall = np.empty((maxiter, popsize, ndim))
+        funall = np.empty((maxiter, popsize))
 
     # VD-CMA
     nfev = 0
-    arbestfitness = numpy.zeros(maxiter)
+    arbestfitness = np.zeros(maxiter)
     ilim = int(10 + 30 * ndim / popsize)
     insigma = sigma
     validfitval = False
@@ -221,23 +230,22 @@ def vdcma(
         it += 1
 
         # Generate lambda offsprings
-        arz = numpy.random.randn(popsize, ndim)
+        arz = np.random.randn(popsize, ndim)
         ary = dvec * (
-            arz
-            + (numpy.sqrt(1.0 + norm_v2) - 1.0) * numpy.outer(numpy.dot(arz, vn), vn)
+            arz + (np.sqrt(1.0 + norm_v2) - 1.0) * np.outer(np.dot(arz, vn), vn)
         )
         if flg_injection:
             ddx = dx / dvec
-            mnorm = (ddx ** 2).sum() - numpy.dot(ddx, vvec) ** 2 / (1.0 + norm_v2)
-            dy = numpy.linalg.norm(numpy.random.randn(ndim)) / numpy.sqrt(mnorm) * dx
+            mnorm = (ddx ** 2).sum() - np.dot(ddx, vvec) ** 2 / (1.0 + norm_v2)
+            dy = np.linalg.norm(np.random.randn(ndim)) / np.sqrt(mnorm) * dx
             ary[0] = dy
             ary[1] = -dy
         arx = xmean + sigma * ary
         arxvalid = arx.copy()
-        diagC = numpy.diag(
-            numpy.dot(
-                numpy.dot(numpy.diag(dvec), numpy.eye(ndim) + numpy.outer(vvec, vvec)),
-                numpy.diag(dvec),
+        diagC = np.diag(
+            np.dot(
+                np.dot(np.diag(dvec), np.eye(ndim) + np.outer(vvec, vvec)),
+                np.diag(dvec),
             )
         )
 
@@ -267,8 +275,8 @@ def vdcma(
             funall[it - 1] = arfitness.copy()
 
         # Sort by fitness and compute weighted mean into xmean
-        arindex = numpy.argsort(arfitness)
-        dx = numpy.dot(weights, arx[arindex[:mu]]) - weights.sum() * xmean
+        arindex = np.argsort(arfitness)
+        dx = np.dot(weights, arx[arindex[:mu]]) - weights.sum() * xmean
         xold = xmean.copy()
         xmean += dx
 
@@ -277,12 +285,10 @@ def vdcma(
 
         # Update sigma
         if flg_injection:
-            alpha_act = (
-                numpy.where(arindex == 1)[0][0] - numpy.where(arindex == 0)[0][0]
-            )
+            alpha_act = np.where(arindex == 1)[0][0] - np.where(arindex == 0)[0][0]
             alpha_act /= popsize - 1.0
             ps += cs * (alpha_act - ps)
-            sigma *= numpy.exp(ps / ds)
+            sigma *= np.exp(ps / ds)
             cond = ps < 0.5
         else:
             flg_injection = True
@@ -291,16 +297,16 @@ def vdcma(
         # Cumulation
         pc *= 1.0 - cc
         pc += (
-            numpy.sqrt(cc * (2.0 - cc) * mueff) * numpy.dot(weights, ary[arindex[:mu]])
+            np.sqrt(cc * (2.0 - cc) * mueff) * np.dot(weights, ary[arindex[:mu]])
             if cond
             else 0.0
         )
 
         # Alpha and related variables
-        gamma = 1.0 / numpy.sqrt(1.0 + norm_v2)
-        alpha = numpy.sqrt(
-            norm_v2 ** 2 + (1.0 + norm_v2) / vnn.max() * (2.0 - gamma)
-        ) / (2.0 + norm_v2)
+        gamma = 1.0 / np.sqrt(1.0 + norm_v2)
+        alpha = np.sqrt(norm_v2 ** 2 + (1.0 + norm_v2) / vnn.max() * (2.0 - gamma)) / (
+            2.0 + norm_v2
+        )
         if alpha < 1.0:
             beta = (4.0 - (2.0 - gamma) / vnn.max()) / (1.0 + 2.0 / norm_v2) ** 2
         else:
@@ -312,8 +318,8 @@ def vdcma(
 
         # Rank-mu
         if cmu == 0.0:
-            pvec_mu = numpy.zeros(ndim)
-            qvec_mu = numpy.zeros(ndim)
+            pvec_mu = np.zeros(ndim)
+            qvec_mu = np.zeros(ndim)
         else:
             pvec_mu, qvec_mu = pvec_and_qvec(
                 vn, norm_v2, ary[arindex[:mu]] / dvec, weights
@@ -321,8 +327,8 @@ def vdcma(
 
         # Rank-one
         if c1 == 0.0:
-            pvec_one = numpy.zeros(ndim)
-            qvec_one = numpy.zeros(ndim)
+            pvec_one = np.zeros(ndim)
+            qvec_one = np.zeros(ndim)
         else:
             pvec_one, qvec_one = pvec_and_qvec(vn, norm_v2, pc / dvec)
 
@@ -341,11 +347,11 @@ def vdcma(
 
             # Truncation factor to guarantee at most 70 percent change
             upfactor = 1.0
-            upfactor = min(upfactor, 0.7 * norm_v / numpy.sqrt(numpy.dot(ngv, ngv)))
-            upfactor = min(upfactor, 0.7 * (dvec / numpy.abs(ngd)).min())
+            upfactor = min(upfactor, 0.7 * norm_v / np.sqrt(np.dot(ngv, ngv)))
+            upfactor = min(upfactor, 0.7 * (dvec / np.abs(ngd)).min())
         else:
-            ngv = numpy.zeros(ndim)
-            ngd = numpy.zeros(ndim)
+            ngv = np.zeros(ndim)
+            ngd = np.zeros(ndim)
             upfactor = 1.0
 
         # Update parameters
@@ -353,8 +359,8 @@ def vdcma(
         dvec += upfactor * ngd
 
         # Update the constants
-        norm_v2 = numpy.dot(vvec, vvec)
-        norm_v = numpy.sqrt(norm_v2)
+        norm_v2 = np.dot(vvec, vvec)
+        norm_v = np.sqrt(norm_v2)
         vn = vvec / norm_v
         vnn = vn ** 2
 
@@ -378,6 +384,18 @@ def vdcma(
         )
         converged = status is not None
 
+        if callback is not None:
+            res = OptimizeResult(
+                x=unstandardize(arxvalid[arindex[0]]),
+                fun=arfitness[arindex[0]],
+                nfev=nfev,
+                nit=it,
+            )
+            if return_all:
+                res.update({"xall": xall[:it], "funall": funall[:it]})
+
+            callback(unstandardize(arxvalid), res)
+
     res = OptimizeResult(
         x=unstandardize(arxvalid[arindex[0]]),
         success=status >= 0,
@@ -388,25 +406,24 @@ def vdcma(
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:it]
-        res["funall"] = funall[:it]
+        res.update({"xall": xall[:it], "funall": funall[:it]})
 
     return res
 
 
 def pvec_and_qvec(vn, norm_v2, y, weights=None):
     """Return pvec and qvec."""
-    y_vn = numpy.dot(y, vn)
+    y_vn = np.dot(y, vn)
     if weights is None:
         pvec = y ** 2 - norm_v2 / (1.0 + norm_v2) * (y_vn * y * vn) - 1.0
         qvec = y_vn * y - (0.5 * (y_vn ** 2 + 1.0 + norm_v2)) * vn
 
     else:
-        pvec = numpy.dot(
+        pvec = np.dot(
             weights, y ** 2 - norm_v2 / (1.0 + norm_v2) * (y_vn * (y * vn).T).T - 1.0
         )
-        qvec = numpy.dot(
-            weights, (y_vn * y.T).T - numpy.outer(0.5 * (y_vn ** 2 + 1.0 + norm_v2), vn)
+        qvec = np.dot(
+            weights, (y_vn * y.T).T - np.outer(0.5 * (y_vn ** 2 + 1.0 + norm_v2), vn)
         )
 
     return pvec, qvec
@@ -415,17 +432,14 @@ def pvec_and_qvec(vn, norm_v2, y, weights=None):
 def ngv_ngd(dvec, vn, vnn, norm_v, norm_v2, alpha, avec, bsca, invavnn, pvec, qvec):
     """Return ngv and ngd."""
     rvec = pvec - alpha / (1.0 + norm_v2) * (
-        (2.0 + norm_v2) * qvec * vn - norm_v2 * numpy.dot(vn, qvec) * vnn
+        (2.0 + norm_v2) * qvec * vn - norm_v2 * np.dot(vn, qvec) * vnn
     )
     svec = (
         rvec / avec
-        - bsca
-        * numpy.dot(rvec, invavnn)
-        / (1.0 + bsca * numpy.dot(vnn, invavnn))
-        * invavnn
+        - bsca * np.dot(rvec, invavnn) / (1.0 + bsca * np.dot(vnn, invavnn)) * invavnn
     )
     ngv = qvec / norm_v - alpha / norm_v * (
-        (2.0 + norm_v2) * (vn * svec) - numpy.dot(svec, vnn) * vn
+        (2.0 + norm_v2) * (vn * svec) - np.dot(svec, vnn) * vn
     )
     ngd = dvec * svec
 

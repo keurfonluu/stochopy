@@ -10,11 +10,11 @@ This examples shows a basic usage of :func:`stochopy.optimize.minimize`.
 # Let's import an objective function to optimize. :mod:`stochopy.factory` has several sample benchmark functions to test.
 # We also have to define the feasible space (or boundaries) for each variable to optimize. The length of the boundary array is used internally to define the dimensionality of the problem. In this example, we will optimize 20 variables within [-5.12, 5.12].
 
-import numpy
+import numpy as np
 from stochopy.factory import rosenbrock
 
-upper = numpy.full(20, 5.12)
-bounds = numpy.column_stack((-upper, upper))
+upper = np.full(20, 5.12)
+bounds = np.column_stack((-upper, upper))
 
 ########################################################################################
 

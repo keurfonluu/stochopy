@@ -1,6 +1,6 @@
 from functools import wraps
 
-import numpy
+import numpy as np
 from joblib import Parallel, delayed
 
 prefer = {
@@ -40,7 +40,7 @@ def optimizer(optfun):
 
                         def wrapper(x):
                             f = parallel(fun(xx, *args) for xx in x)
-                            return numpy.array(f)
+                            return np.array(f)
 
                     elif backend == "mpi":
                         try:
@@ -57,11 +57,11 @@ def optimizer(optfun):
 
                         def wrapper(x):
                             popsize = len(x)
-                            f = numpy.zeros(popsize)
-                            fmpi = numpy.zeros(popsize)
+                            f = np.zeros(popsize)
+                            fmpi = np.zeros(popsize)
 
                             mpi_comm.Bcast([x, mpi_double], root=0)
-                            for i in numpy.arange(mpi_rank, popsize, mpi_size):
+                            for i in np.arange(mpi_rank, popsize, mpi_size):
                                 fmpi[i] = fun(x[i], *args)
                             mpi_comm.Barrier()
 
@@ -77,13 +77,13 @@ def optimizer(optfun):
                 else:
 
                     def wrapper(x):
-                        return numpy.array([fun(xx, *args) for xx in x])
+                        return np.array([fun(xx, *args) for xx in x])
 
             else:
 
                 def wrapper(x):
                     if x.ndim == 2:
-                        return numpy.array([fun(xx, *args) for xx in x])
+                        return np.array([fun(xx, *args) for xx in x])
                     else:
                         return fun(x, *args)
 
@@ -108,14 +108,12 @@ def optimizer(optfun):
 
 def lhs(popsize, ndim, bounds=None):
     """Latin Hypercube sampling."""
-    x = numpy.random.uniform(size=(popsize, ndim)) / popsize
-    x += numpy.linspace(-1.0, 1.0, popsize, endpoint=False)[:, None]
-    pop = numpy.transpose(
-        [x[numpy.random.permutation(popsize), i] for i in range(ndim)]
-    )
+    x = np.random.uniform(size=(popsize, ndim)) / popsize
+    x += np.linspace(-1.0, 1.0, popsize, endpoint=False)[:, None]
+    pop = np.transpose([x[np.random.permutation(popsize), i] for i in range(ndim)])
 
     if bounds is not None:
-        lower, upper = numpy.transpose(bounds)
+        lower, upper = np.transpose(bounds)
         pop *= 0.5 * (upper - lower)
         pop += 0.5 * (upper + lower)
 
@@ -131,10 +129,10 @@ def selection_sync(it, cand, xbest, x, xfun, maxiter, xtol, ftol, fun):
     x[idx] = cand[idx].copy()
 
     # Best solution index
-    idx = numpy.argmin(xfun)
+    idx = np.argmin(xfun)
 
     # Stop if best solution changes less than xtol
-    cond1 = numpy.linalg.norm(xbest - x[idx]) <= xtol
+    cond1 = np.linalg.norm(xbest - x[idx]) <= xtol
     cond2 = xfun[idx] <= ftol
     if cond1 and cond2:
         xbest = x[idx].copy()
@@ -175,7 +173,7 @@ def selection_async(it, cand, xbest, xbestfun, x, xfun, maxiter, xtol, ftol, fun
         # Update best individual
         if candfun <= xbestfun:
             # Stop if best solution changes less than xtol
-            cond1 = numpy.linalg.norm(xbest - cand[i]) <= xtol
+            cond1 = np.linalg.norm(xbest - cand[i]) <= xtol
             cond2 = candfun <= ftol
             if cond1 and cond2:
                 xbest = cand[i].copy()

@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import pyvista
 
 import stochopy
@@ -18,19 +18,19 @@ funall = x.funall
 # Create surface mesh from objective function topography
 xmin, xmax = bounds[0]
 ymin, ymax = bounds[1]
-x = numpy.linspace(xmin, xmax, 51)
-y = numpy.linspace(ymin, ymax, 51)
-z = numpy.zeros(1)
-x, y, z = numpy.meshgrid(x, y, z)
+x = np.linspace(xmin, xmax, 51)
+y = np.linspace(ymin, ymax, 51)
+z = np.zeros(1)
+x, y, z = np.meshgrid(x, y, z)
 mesh = pyvista.StructuredGrid(x, y, z).cast_to_unstructured_grid()
 
-funval = numpy.array([fun(point) for point in mesh.points[:, :2]])
+funval = np.array([fun(point) for point in mesh.points[:, :2]])
 scale = 5.12 / funval.max()
 mesh.points[:, 2] = funval * scale
 mesh["funval"] = funval
 
 # Create point cloud from initial population
-points = numpy.column_stack((xall[0], funall[0] * scale))
+points = np.column_stack((xall[0], funall[0] * scale))
 population = pyvista.PolyData(points)
 
 # Initialize plotter
@@ -77,7 +77,7 @@ p.show(
 # Update population
 p.open_movie("sample.mp4", framerate=12)
 for i, (x, fun) in enumerate(zip(xall, funall)):
-    population.points = numpy.column_stack((x, fun * scale))
+    population.points = np.column_stack((x, fun * scale))
     generation.SetText(3, f"Generation {i}")
     p.write_frame()
 

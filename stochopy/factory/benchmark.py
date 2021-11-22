@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 __all__ = [
     "ackley",
@@ -26,12 +26,12 @@ def ackley(x):
         The value of the Ackley function.
 
     """
-    x = numpy.asarray(x)
+    x = np.asarray(x)
     ndim = x.size
     e = 2.7182818284590451
-    sum1 = numpy.sqrt(1.0 / ndim * numpy.square(x).sum())
-    sum2 = 1.0 / ndim * numpy.cos(2.0 * numpy.pi * x).sum()
-    return 20.0 + e - 20.0 * numpy.exp(-0.2 * sum1) - numpy.exp(sum2)
+    sum1 = np.sqrt(1.0 / ndim * np.square(x).sum())
+    sum2 = 1.0 / ndim * np.cos(2.0 * np.pi * x).sum()
+    return 20.0 + e - 20.0 * np.exp(-0.2 * sum1) - np.exp(sum2)
 
 
 def griewank(x):
@@ -49,10 +49,10 @@ def griewank(x):
         The value of the Griewank function.
 
     """
-    x = numpy.asarray(x)
+    x = np.asarray(x)
     ndim = x.size
-    sum1 = numpy.square(x).sum() / 4000.0
-    prod1 = numpy.prod(numpy.cos(x / numpy.sqrt(numpy.arange(1, ndim + 1))))
+    sum1 = np.square(x).sum() / 4000.0
+    prod1 = np.prod(np.cos(x / np.sqrt(np.arange(1, ndim + 1))))
     return 1.0 + sum1 - prod1
 
 
@@ -71,9 +71,9 @@ def quartic(x):
         The value of the Quartic function.
 
     """
-    x = numpy.asarray(x)
+    x = np.asarray(x)
     ndim = x.size
-    return (numpy.arange(1, ndim + 1) * numpy.power(x, 4)).sum()
+    return (np.arange(1, ndim + 1) * np.power(x, 4)).sum()
 
 
 def rastrigin(x):
@@ -91,9 +91,9 @@ def rastrigin(x):
         The value of the Rastrigin function.
 
     """
-    x = numpy.asarray(x)
+    x = np.asarray(x)
     ndim = x.size
-    sum1 = (numpy.square(x) - 10.0 * numpy.cos(2.0 * numpy.pi * x)).sum()
+    sum1 = (np.square(x) - 10.0 * np.cos(2.0 * np.pi * x)).sum()
     return 10.0 * ndim + sum1
 
 
@@ -112,9 +112,9 @@ def rosenbrock(x):
         The value of the Rosenbrock function.
 
     """
-    x = numpy.asarray(x)
+    x = np.asarray(x)
     sum1 = ((x[1:] - x[:-1] ** 2) ** 2).sum()
-    sum2 = numpy.square(1.0 - x[:-1]).sum()
+    sum2 = np.square(1.0 - x[:-1]).sum()
     return 100.0 * sum1 + sum2
 
 
@@ -133,7 +133,7 @@ def sphere(x):
         The value of the Sphere function.
 
     """
-    return numpy.square(x).sum()
+    return np.square(x).sum()
 
 
 def styblinski_tang(x):
@@ -151,6 +151,6 @@ def styblinski_tang(x):
         The value of the Styblinski-Tang function.
 
     """
-    x = numpy.asarray(x)
-    sum1 = (numpy.power(x, 4) - 16.0 * numpy.square(x) + 5.0 * x).sum()
+    x = np.asarray(x)
+    sum1 = (np.power(x, 4) - 16.0 * np.square(x) + 5.0 * x).sum()
     return 0.5 * sum1 + 39.16599 * x.size

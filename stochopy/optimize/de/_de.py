@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._common import lhs, messages, optimizer, selection_async, selection_sync
 from .._helpers import OptimizeResult, register
@@ -28,6 +28,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    callback=None,
 ):
     """
     Minimize an objective function using Differential Evolution (DE).
@@ -83,6 +84,8 @@ def minimize(
 
     return_all : bool, optional, default False
         Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
     Returns
     -------
@@ -104,12 +107,12 @@ def minimize(
         raise TypeError()
 
     # Dimensionality and search space
-    if numpy.ndim(bounds) != 2:
+    if np.ndim(bounds) != 2:
         raise ValueError()
 
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != len(bounds):
+        if np.ndim(x0) != 2 or np.shape(x0)[1] != len(bounds):
             raise ValueError()
 
     # Population size
@@ -140,7 +143,11 @@ def minimize(
 
     # Seed
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
+
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
 
     # Run in serial or parallel
     optargs = (
@@ -155,6 +162,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        callback,
     )
     res = de(fun, args, sync, workers, backend, *optargs)
 
@@ -179,10 +187,11 @@ def de(
     xtol,
     ftol,
     return_all,
+    callback,
 ):
     """Optimize with DE."""
     ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
+    lower, upper = np.transpose(bounds)
 
     # Constraints
     cons = _constraints_map[constraints](lower, upper)
@@ -192,23 +201,31 @@ def de(
 
     # Initial population
     X = x0 if x0 is not None else lhs(popsize, ndim, bounds)
-    U = numpy.empty((popsize, ndim))
+    U = np.empty((popsize, ndim))
 
     # Evaluate initial population
     pfit = fun(X)
     pbestfit = pfit.copy()
 
     # Initial best solution
-    gbidx = numpy.argmin(pbestfit)
+    gbidx = np.argmin(pbestfit)
     gfit = pbestfit[gbidx]
     gbest = X[gbidx].copy()
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((maxiter, popsize, ndim))
-        funall = numpy.empty((maxiter, popsize))
+        xall = np.empty((maxiter, popsize, ndim))
+        funall = np.empty((maxiter, popsize))
         xall[0] = X.copy()
         funall[0] = pfit.copy()
+
+    # First iteration for callback
+    if callback is not None:
+        res = OptimizeResult(x=gbest, fun=gfit, nfev=popsize, nit=1)
+        if return_all:
+            res.update({"xall": xall[:1], "funall": funall[:1]})
+
+        callback(X, res)
 
     # Iterate until one of the termination criterion is satisfied
     it = 1
@@ -216,7 +233,7 @@ def de(
     while not converged:
         it += 1
 
-        r1 = numpy.random.rand(popsize, ndim)
+        r1 = np.random.rand(popsize, ndim)
         X, gbest, pbestfit, gfit, pfit, status = de_iter(
             it,
             X,
@@ -242,6 +259,13 @@ def de(
 
         converged = status is not None
 
+        if callback is not None:
+            res = OptimizeResult(x=gbest, fun=gfit, nfev=it * popsize, nit=it)
+            if return_all:
+                res.update({"xall": xall[:it], "funall": funall[:it]})
+
+            callback(X, res)
+
     res = OptimizeResult(
         x=gbest,
         success=status >= 0,
@@ -252,20 +276,19 @@ def de(
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:it]
-        res["funall"] = funall[:it]
+        res.update({"xall": xall[:it], "funall": funall[:it]})
 
     return res
 
 
 def delete_shuffle_sync(popsize):
     """Delete current solution from population for mutation (synchronous)."""
-    return numpy.transpose([delete_shuffle_async(i, popsize) for i in range(popsize)])
+    return np.transpose([delete_shuffle_async(i, popsize) for i in range(popsize)])
 
 
 def delete_shuffle_async(i, popsize):
     """Delete current solution from population for mutation (asynchronous)."""
-    return numpy.random.permutation(numpy.delete(numpy.arange(popsize), i))
+    return np.random.permutation(np.delete(np.arange(popsize), i))
 
 
 def de_sync(
@@ -293,12 +316,12 @@ def de_sync(
     V = mut(delete_shuffle_sync(popsize), F, X, gbest)
 
     # Recombination
-    mask = numpy.zeros_like(r1, dtype=bool)
-    irand = numpy.random.randint(ndim, size=popsize)
+    mask = np.zeros_like(r1, dtype=bool)
+    irand = np.random.randint(ndim, size=popsize)
     for i in range(popsize):
         mask[i, irand[i]] = True
 
-    U[:] = cons(numpy.where(numpy.logical_or(mask, r1 <= CR), V, X))
+    U[:] = cons(np.where(np.logical_or(mask, r1 <= CR), V, X))
 
     # Selection
     gbest, gfit, pfit, status = selection_sync(
@@ -334,10 +357,10 @@ def de_async(
         V = mut(delete_shuffle_async(i, popsize), F, X, gbest)
 
         # Recombination
-        mask = numpy.zeros(ndim, dtype=bool)
-        irand = numpy.random.randint(ndim)
+        mask = np.zeros(ndim, dtype=bool)
+        irand = np.random.randint(ndim)
         mask[irand] = True
-        U[i] = cons(numpy.where(numpy.logical_or(mask, r1[i] <= CR), V, X[i]))
+        U[i] = cons(np.where(np.logical_or(mask, r1[i] <= CR), V, X[i]))
 
         # Selection
         gbest, gfit, pfit[i], status = selection_async(

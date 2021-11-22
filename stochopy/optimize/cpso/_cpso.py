@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .._common import lhs, messages, optimizer, selection_async, selection_sync
 from .._helpers import OptimizeResult, register
@@ -28,6 +28,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    callback=None,
 ):
     """
     Minimize an objective function using Competitive Particle Swarm Optimization (CPSO).
@@ -79,6 +80,8 @@ def minimize(
 
     return_all : bool, optional, default False
         Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
     Returns
     -------
@@ -102,12 +105,12 @@ def minimize(
         raise TypeError()
 
     # Dimensionality and search space
-    if numpy.ndim(bounds) != 2:
+    if np.ndim(bounds) != 2:
         raise ValueError()
 
     # Initial guess x0
     if x0 is not None:
-        if numpy.ndim(x0) != 2 or numpy.shape(x0)[1] != len(bounds):
+        if np.ndim(x0) != 2 or np.shape(x0)[1] != len(bounds):
             raise ValueError()
 
     # Population size
@@ -145,7 +148,11 @@ def minimize(
 
     # Seed
     if seed is not None:
-        numpy.random.seed(seed)
+        np.random.seed(seed)
+
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
 
     # Run in serial or parallel
     optargs = (
@@ -161,6 +168,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        callback,
     )
     res = cpso(fun, args, sync, workers, backend, *optargs)
 
@@ -186,10 +194,11 @@ def cpso(
     xtol,
     ftol,
     return_all,
+    callback,
 ):
     """Optimize with CPSO."""
     ndim = len(bounds)
-    lower, upper = numpy.transpose(bounds)
+    lower, upper = np.transpose(bounds)
 
     # Constraints
     cons = _constraints_map[constraints](lower, upper, sync)
@@ -199,13 +208,11 @@ def cpso(
 
     # Swarm maximum radius
     if gamma:
-        delta = numpy.log(1.0 + 0.003 * popsize) / numpy.max(
-            (0.2, numpy.log(0.01 * maxiter))
-        )
+        delta = np.log(1.0 + 0.003 * popsize) / np.max((0.2, np.log(0.01 * maxiter)))
 
     # Initial population
     X = x0 if x0 is not None else lhs(popsize, ndim, bounds)
-    V = numpy.zeros((popsize, ndim))
+    V = np.zeros((popsize, ndim))
     pbest = X.copy()
 
     # Evaluate initial population
@@ -213,16 +220,24 @@ def cpso(
     pbestfit = pfit.copy()
 
     # Initial best solution
-    gbidx = numpy.argmin(pbestfit)
+    gbidx = np.argmin(pbestfit)
     gfit = pbestfit[gbidx]
     gbest = X[gbidx].copy()
 
     # Initialize arrays
     if return_all:
-        xall = numpy.empty((maxiter, popsize, ndim))
-        funall = numpy.empty((maxiter, popsize))
+        xall = np.empty((maxiter, popsize, ndim))
+        funall = np.empty((maxiter, popsize))
         xall[0] = X.copy()
         funall[0] = pfit.copy()
+
+    # First iteration for callback
+    if callback is not None:
+        res = OptimizeResult(x=gbest, fun=gfit, nfev=popsize, nit=1)
+        if return_all:
+            res.update({"xall": xall[:1], "funall": funall[:1]})
+
+        callback(X, res)
 
     # Iterate until one of the termination criterion is satisfied
     it = 1
@@ -230,8 +245,8 @@ def cpso(
     while not converged:
         it += 1
 
-        r1 = numpy.random.rand(popsize, ndim)
-        r2 = numpy.random.rand(popsize, ndim)
+        r1 = np.random.rand(popsize, ndim)
+        r2 = np.random.rand(popsize, ndim)
         X, V, pbest, gbest, pbestfit, gfit, pfit, status = pso_iter(
             it,
             X,
@@ -259,6 +274,13 @@ def cpso(
 
         converged = status is not None
 
+        if callback is not None:
+            res = OptimizeResult(x=gbest, fun=gfit, nfev=it * popsize, nit=it)
+            if return_all:
+                res.update({"xall": xall[:it], "funall": funall[:it]})
+
+            callback(X, res)
+
         if not converged and gamma:
             X, V, pbest, pbestfit = restart(
                 it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxiter
@@ -274,8 +296,7 @@ def cpso(
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:it]
-        res["funall"] = funall[:it]
+        res.update({"xall": xall[:it], "funall": funall[:it]})
 
     return res
 
@@ -366,23 +387,21 @@ def restart(it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxite
     popsize, ndim = X.shape
 
     # Evaluate swarm size
-    swarm_radius = numpy.max([numpy.linalg.norm(X[i] - gbest) for i in range(popsize)])
-    swarm_radius /= numpy.sqrt(4.0 * ndim)
+    swarm_radius = np.max([np.linalg.norm(X[i] - gbest) for i in range(popsize)])
+    swarm_radius /= np.sqrt(4.0 * ndim)
 
     # Restart particles if swarm size is lower than threshold
     if swarm_radius < delta:
         inorm = it / maxiter
-        nw = int(
-            (popsize - 1.0) / (1.0 + numpy.exp(1.0 / 0.09 * (inorm - gamma + 0.5)))
-        )
+        nw = int((popsize - 1.0) / (1.0 + np.exp(1.0 / 0.09 * (inorm - gamma + 0.5))))
 
         # Reset positions, velocities and personal bests
         if nw > 0:
             idx = pbestfit.argsort()[: -nw - 1 : -1]
-            V[idx] = numpy.zeros((nw, ndim))
-            X[idx] = numpy.random.uniform(lower, upper, (nw, ndim))
+            V[idx] = np.zeros((nw, ndim))
+            X[idx] = np.random.uniform(lower, upper, (nw, ndim))
             pbest[idx] = X[idx].copy()
-            pbestfit[idx] = numpy.full(nw, 1.0e30)
+            pbestfit[idx] = np.full(nw, 1.0e30)
 
     return X, V, pbest, pbestfit
 

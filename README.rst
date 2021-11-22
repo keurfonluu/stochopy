@@ -74,12 +74,12 @@ Given an optimization problem defined by an objective function and a feasible sp
 
 .. code-block:: python
 
-   import numpy
+   import numpy as np
 
    def rosenbrock(x):
-      x = numpy.asarray(x)
+      x = np.asarray(x)
       sum1 = ((x[1:] - x[:-1] ** 2) ** 2).sum()
-      sum2 = numpy.square(1.0 - x[:-1]).sum()
+      sum2 = np.square(1.0 - x[:-1]).sum()
       return 100.0 * sum1 + sum2
 
    bounds = [[-5.12, 5.12], [-5.12, 5.12]]  # The number of variables to optimize is len(bounds)
