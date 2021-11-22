@@ -41,7 +41,7 @@ def register(name, minimize):
     _optimizer_map[name] = minimize
 
 
-def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
+def minimize(fun, bounds, x0=None, args=(), method="de", options=None, callback=None):
     """
     Minimize an objective function using a stochastic algorithm.
 
@@ -72,6 +72,9 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
          - seed (int or None): seed for random number generator
          - return_all (bool): set to True to return an array of all the solutions at each iteration.
 
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
+
     Returns
     -------
     :class:`stochopy.optimize.OptimizeResult`
@@ -85,4 +88,4 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None):
     """
     options = options if options else {}
 
-    return _optimizer_map[method](fun=fun, bounds=bounds, x0=x0, args=args, **options)
+    return _optimizer_map[method](fun=fun, bounds=bounds, x0=x0, args=args, callback=callback, **options)

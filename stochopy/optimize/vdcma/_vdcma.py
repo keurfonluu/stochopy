@@ -26,6 +26,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    callback=None,
 ):
     """
     Minimize an objective function using VD-CMA.
@@ -71,6 +72,8 @@ def minimize(
 
     return_all : bool, optional, default False
         Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
     Returns
     -------
@@ -111,6 +114,10 @@ def minimize(
     if seed is not None:
         numpy.random.seed(seed)
 
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
+
     # Run in serial or parallel
     optargs = (
         bounds,
@@ -123,6 +130,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        callback,
     )
     res = vdcma(fun, args, True, workers, backend, *optargs)
 
@@ -146,6 +154,7 @@ def vdcma(
     xtol,
     ftol,
     return_all,
+    callback,
 ):
     """Optimize with VD-CMA."""
     ndim = len(bounds)
@@ -378,6 +387,18 @@ def vdcma(
         )
         converged = status is not None
 
+        if callback is not None:
+            res = OptimizeResult(
+                x=unstandardize(arxvalid[arindex[0]]),
+                fun=arfitness[arindex[0]],
+                nfev=nfev,
+                nit=it,
+            )
+            if return_all:
+                res.update({"xall": xall[:it], "funall": funall[:it]})
+            
+            callback(unstandardize(arxvalid), res)
+
     res = OptimizeResult(
         x=unstandardize(arxvalid[arindex[0]]),
         success=status >= 0,
@@ -388,8 +409,7 @@ def vdcma(
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:it]
-        res["funall"] = funall[:it]
+        res.update({"xall": xall[:it], "funall": funall[:it]})
 
     return res
 

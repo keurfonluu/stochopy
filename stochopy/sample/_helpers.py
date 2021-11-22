@@ -35,7 +35,7 @@ def register(name, sample):
     _sampler_map[name] = sample
 
 
-def sample(fun, bounds, x0=None, args=(), method="mcmc", options=None):
+def sample(fun, bounds, x0=None, args=(), method="mcmc", options=None, callback=None):
     """
     Sample the variable space of an objective function.
 
@@ -62,6 +62,8 @@ def sample(fun, bounds, x0=None, args=(), method="mcmc", options=None):
          - seed (int or None): seed for random number generator
          - return_all (bool): set to True to return an array of all the solutions at each iteration
 
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(xk, SampleResult state)``, where ``xk`` is the current population and ``state`` is a :class:`stochopy.sample.SampleResult` object with the same fields as the ones from the return.
 
     Returns
     -------
@@ -76,4 +78,4 @@ def sample(fun, bounds, x0=None, args=(), method="mcmc", options=None):
     """
     options = options if options else {}
 
-    return _sampler_map[method](fun=fun, bounds=bounds, x0=x0, args=args, **options)
+    return _sampler_map[method](fun=fun, bounds=bounds, x0=x0, args=args, callback=callback, **options)

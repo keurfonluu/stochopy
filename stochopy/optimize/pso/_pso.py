@@ -24,6 +24,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    callback=None,
 ):
     """
     Minimize an objective function using Competitive Particle Swarm Optimization (CPSO).
@@ -73,6 +74,8 @@ def minimize(
 
     return_all : bool, optional, default False
         Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
     Returns
     -------
@@ -111,6 +114,7 @@ def minimize(
         workers,
         backend,
         return_all,
+        callback,
     )
 
 

@@ -22,6 +22,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    callback=True,
 ):
     """
     Minimize an objective function using Neighborhood Algorithm (NA).
@@ -59,6 +60,8 @@ def minimize(
 
     return_all : bool, optional, default False
         Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
     Returns
     -------
@@ -103,6 +106,10 @@ def minimize(
     if seed is not None:
         numpy.random.seed(seed)
 
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
+
     # Run in serial or parallel
     optargs = (
         bounds,
@@ -113,6 +120,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        callback,
     )
     res = na(fun, args, True, workers, backend, *optargs)
 
@@ -134,6 +142,7 @@ def na(
     xtol,
     ftol,
     return_all,
+    callback,
 ):
     """Optimize with Neighborhood Algorithm."""
     ndim = len(bounds)
@@ -173,6 +182,19 @@ def na(
         xall[0] = unnormalize(X)
         funall[0] = pfit.copy()
 
+    # First iteration for callback
+    if callback is not None:
+        res = OptimizeResult(
+            x=unnormalize(gbest),
+            fun=gfit,
+            nfev=popsize,
+            nit=1,
+        )
+        if return_all:
+            res.update({"xall": xall[:1], "funall": funall[:1]})
+        
+        callback(unnormalize(X), res)
+
     # Iterate until one of the termination criterion is satisfied
     it = 1
     converged = False
@@ -190,10 +212,22 @@ def na(
         Xallfit = numpy.concatenate((pfit, Xallfit))
 
         if return_all:
-            xall[it - 1] = unnormalize(X.copy())
+            xall[it - 1] = unnormalize(X)
             funall[it - 1] = pfit.copy()
 
         converged = status is not None
+
+        if callback is not None:
+            res = OptimizeResult(
+                x=unnormalize(gbest),
+                fun=gfit,
+                nfev=it * popsize,
+                nit=it,
+            )
+            if return_all:
+                res.update({"xall": xall[:it], "funall": funall[:it]})
+            
+            callback(unnormalize(X), res)
 
     res = OptimizeResult(
         x=unnormalize(gbest),
@@ -205,8 +239,7 @@ def na(
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:it]
-        res["funall"] = funall[:it]
+        res.update({"xall": xall[:it], "funall": funall[:it]})
 
     return res
 

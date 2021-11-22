@@ -21,6 +21,7 @@ def sample(
     finite_diff_abs_step=1.0e-4,
     constraints=None,
     return_all=True,
+    callback=None,
 ):
     """
     Sample the variable space using the Hamiltonian (Hybrid) Monte-Carlo algorithm.
@@ -57,6 +58,8 @@ def sample(
 
     return_all : bool, optional, default True
         Set to True to return an array with shape (``maxiter``, ``ndim``) of all the samples.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(xk, SampleResult state)``, where ``xk`` is the current population and ``state`` is a :class:`stochopy.sample.SampleResult` object with the same fields as the ones from the return.
 
     Returns
     -------
@@ -117,14 +120,32 @@ def sample(
     if seed is not None:
         numpy.random.seed(seed)
 
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
+
     # Initialize arrays
     xall = numpy.empty((maxiter, ndim))
     funall = numpy.empty(maxiter)
     xall[0] = x0 if x0 is not None else numpy.random.uniform(lower, upper)
     funall[0] = fun(xall[0], *args)
 
+    # First iteration for callback
+    if callback is not None:
+        res = SampleResult(
+            x=xall[0],
+            fun=funall[0],
+            nit=1,
+            accept_ratio=1.0,
+        )
+        if return_all:
+            res.update({"xall": xall[:1], "funall": funall[:1]})
+            
+        callback(xall[0], res)
+
     # Leap-frog algorithm
     n_accepted = 0
+    imin, fmin = 0, numpy.Inf
     for i in range(1, maxiter):
         q = xall[i - 1].copy()
         p = numpy.random.randn(ndim)  # Random momentum
@@ -152,9 +173,23 @@ def sample(
             n_accepted += 1
             xall[i] = q
             funall[i] = U
+            if funall[i] < fmin:
+                imin, fmin = i, funall[i]
         else:
             xall[i] = xall[i - 1]
             funall[i] = funall[i - 1]
+
+        if callback is not None:
+            res = SampleResult(
+                x=xall[imin],
+                fun=funall[imin],
+                nit=i + 1,
+                accept_ratio=n_accepted / (i + 1),
+            )
+            if return_all:
+                res.update({"xall": xall[:i], "funall": funall[:i]})
+                
+            callback(xall[i], res)
 
     idx = numpy.argmin(funall)
     res = SampleResult(

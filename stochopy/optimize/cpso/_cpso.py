@@ -28,6 +28,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    callback=None,
 ):
     """
     Minimize an objective function using Competitive Particle Swarm Optimization (CPSO).
@@ -79,6 +80,8 @@ def minimize(
 
     return_all : bool, optional, default False
         Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+    callback : callable or None, optional, default None
+        Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
     Returns
     -------
@@ -147,6 +150,10 @@ def minimize(
     if seed is not None:
         numpy.random.seed(seed)
 
+    # Callback
+    if callback is not None and not hasattr(callback, "__call__"):
+        raise ValueError()
+
     # Run in serial or parallel
     optargs = (
         bounds,
@@ -161,6 +168,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        callback,
     )
     res = cpso(fun, args, sync, workers, backend, *optargs)
 
@@ -186,6 +194,7 @@ def cpso(
     xtol,
     ftol,
     return_all,
+    callback,
 ):
     """Optimize with CPSO."""
     ndim = len(bounds)
@@ -224,6 +233,19 @@ def cpso(
         xall[0] = X.copy()
         funall[0] = pfit.copy()
 
+    # First iteration for callback
+    if callback is not None:
+        res = OptimizeResult(
+            x=gbest,
+            fun=gfit,
+            nfev=popsize,
+            nit=1,
+        )
+        if return_all:
+            res.update({"xall": xall[:1], "funall": funall[:1]})
+            
+        callback(X, res)
+
     # Iterate until one of the termination criterion is satisfied
     it = 1
     converged = False
@@ -259,6 +281,18 @@ def cpso(
 
         converged = status is not None
 
+        if callback is not None:
+            res = OptimizeResult(
+                x=gbest,
+                fun=gfit,
+                nfev=it * popsize,
+                nit=it,
+            )
+            if return_all:
+                res.update({"xall": xall[:it], "funall": funall[:it]})
+            
+            callback(X, res)
+
         if not converged and gamma:
             X, V, pbest, pbestfit = restart(
                 it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxiter
@@ -274,8 +308,7 @@ def cpso(
         nit=it,
     )
     if return_all:
-        res["xall"] = xall[:it]
-        res["funall"] = funall[:it]
+        res.update({"xall": xall[:it], "funall": funall[:it]})
 
     return res
 
