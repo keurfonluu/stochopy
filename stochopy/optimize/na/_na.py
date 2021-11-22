@@ -149,8 +149,10 @@ def na(
     lower, upper = numpy.transpose(bounds)
 
     # Normalize and unnormalize
-    normalize = lambda x: (x - lower) / (upper - lower)
-    unnormalize = lambda x: x * (upper - lower) + lower
+    span = upper - lower
+    span_mask = span > 0.0
+    normalize = lambda x: numpy.where(span_mask, (x - lower) / span, upper)
+    unnormalize = lambda x: numpy.where(span_mask, x * span + lower, upper)
 
     fun = lambda x: funnorm(unnormalize(x))
 
