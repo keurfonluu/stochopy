@@ -1,5 +1,9 @@
+import numpy
 import helpers
 import pytest
+
+from stochopy.optimize import minimize
+from stochopy.factory import rosenbrock
 
 
 @pytest.mark.parametrize(
@@ -126,3 +130,17 @@ def test_pso(options, xref):
 def test_vdcma(options, xref):
     options.update({"sigma": 0.1, "muperc": 0.5})
     helpers.optimize_parallel("vdcma", options, xref)
+
+
+@pytest.mark.parametrize("method", ["cmaes", "cpso", "de", "na", "pso", "vdcma"])
+def test_callback(method):
+    global count
+    count = 0
+
+    def callback(X, state):
+        global count
+        count += 1
+
+    maxiter = numpy.random.randint(2, 10)
+    _ = minimize(rosenbrock, [[-5.12, 5.12]] * 2, method=method, options={"maxiter": maxiter}, callback=callback)
+    assert count == maxiter
