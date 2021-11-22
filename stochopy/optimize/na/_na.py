@@ -261,7 +261,8 @@ def mutation(Xall, Xallfit, popsize, ndim, nr, span_mask):
 
         for j in range(ndim):
             if not span_mask[j]:
-                X[i, j] = 0.0  # Value does not matter as it will be fixed by unnormalize
+                # Value does not matter as it will be fixed by unnormalize
+                X[i, j] = 0.0
                 continue
 
             lim = 0.5 * (Xall[k, j] + U[:, j] + (d1 - d2) / (Xall[k, j] - U[:, j]))
