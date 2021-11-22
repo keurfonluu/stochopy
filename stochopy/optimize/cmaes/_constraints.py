@@ -63,8 +63,7 @@ def Penalize(
         tx = xmean - tx
         idx = np.logical_and(
             ti,
-            np.abs(tx)
-            > 3.0 * max(1.0, np.sqrt(ndim / mueff)) * sigma * np.sqrt(diagC),
+            np.abs(tx) > 3.0 * max(1.0, np.sqrt(ndim / mueff)) * sigma * np.sqrt(diagC),
         )
         idx = np.logical_and(idx, np.sign(tx) == np.sign(xmean - xold))
         bnd_weights = np.array(

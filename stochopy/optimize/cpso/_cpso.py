@@ -208,9 +208,7 @@ def cpso(
 
     # Swarm maximum radius
     if gamma:
-        delta = np.log(1.0 + 0.003 * popsize) / np.max(
-            (0.2, np.log(0.01 * maxiter))
-        )
+        delta = np.log(1.0 + 0.003 * popsize) / np.max((0.2, np.log(0.01 * maxiter)))
 
     # Initial population
     X = x0 if x0 is not None else lhs(popsize, ndim, bounds)
@@ -235,15 +233,10 @@ def cpso(
 
     # First iteration for callback
     if callback is not None:
-        res = OptimizeResult(
-            x=gbest,
-            fun=gfit,
-            nfev=popsize,
-            nit=1,
-        )
+        res = OptimizeResult(x=gbest, fun=gfit, nfev=popsize, nit=1,)
         if return_all:
             res.update({"xall": xall[:1], "funall": funall[:1]})
-            
+
         callback(X, res)
 
     # Iterate until one of the termination criterion is satisfied
@@ -282,15 +275,10 @@ def cpso(
         converged = status is not None
 
         if callback is not None:
-            res = OptimizeResult(
-                x=gbest,
-                fun=gfit,
-                nfev=it * popsize,
-                nit=it,
-            )
+            res = OptimizeResult(x=gbest, fun=gfit, nfev=it * popsize, nit=it,)
             if return_all:
                 res.update({"xall": xall[:it], "funall": funall[:it]})
-            
+
             callback(X, res)
 
         if not converged and gamma:
@@ -405,9 +393,7 @@ def restart(it, X, V, pbest, gbest, pbestfit, lower, upper, gamma, delta, maxite
     # Restart particles if swarm size is lower than threshold
     if swarm_radius < delta:
         inorm = it / maxiter
-        nw = int(
-            (popsize - 1.0) / (1.0 + np.exp(1.0 / 0.09 * (inorm - gamma + 0.5)))
-        )
+        nw = int((popsize - 1.0) / (1.0 + np.exp(1.0 / 0.09 * (inorm - gamma + 0.5))))
 
         # Reset positions, velocities and personal bests
         if nw > 0:

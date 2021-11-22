@@ -232,8 +232,7 @@ def vdcma(
         # Generate lambda offsprings
         arz = np.random.randn(popsize, ndim)
         ary = dvec * (
-            arz
-            + (np.sqrt(1.0 + norm_v2) - 1.0) * np.outer(np.dot(arz, vn), vn)
+            arz + (np.sqrt(1.0 + norm_v2) - 1.0) * np.outer(np.dot(arz, vn), vn)
         )
         if flg_injection:
             ddx = dx / dvec
@@ -286,9 +285,7 @@ def vdcma(
 
         # Update sigma
         if flg_injection:
-            alpha_act = (
-                np.where(arindex == 1)[0][0] - np.where(arindex == 0)[0][0]
-            )
+            alpha_act = np.where(arindex == 1)[0][0] - np.where(arindex == 0)[0][0]
             alpha_act /= popsize - 1.0
             ps += cs * (alpha_act - ps)
             sigma *= np.exp(ps / ds)
@@ -307,9 +304,9 @@ def vdcma(
 
         # Alpha and related variables
         gamma = 1.0 / np.sqrt(1.0 + norm_v2)
-        alpha = np.sqrt(
-            norm_v2 ** 2 + (1.0 + norm_v2) / vnn.max() * (2.0 - gamma)
-        ) / (2.0 + norm_v2)
+        alpha = np.sqrt(norm_v2 ** 2 + (1.0 + norm_v2) / vnn.max() * (2.0 - gamma)) / (
+            2.0 + norm_v2
+        )
         if alpha < 1.0:
             beta = (4.0 - (2.0 - gamma) / vnn.max()) / (1.0 + 2.0 / norm_v2) ** 2
         else:
@@ -396,7 +393,7 @@ def vdcma(
             )
             if return_all:
                 res.update({"xall": xall[:it], "funall": funall[:it]})
-            
+
             callback(unstandardize(arxvalid), res)
 
     res = OptimizeResult(
@@ -439,10 +436,7 @@ def ngv_ngd(dvec, vn, vnn, norm_v, norm_v2, alpha, avec, bsca, invavnn, pvec, qv
     )
     svec = (
         rvec / avec
-        - bsca
-        * np.dot(rvec, invavnn)
-        / (1.0 + bsca * np.dot(vnn, invavnn))
-        * invavnn
+        - bsca * np.dot(rvec, invavnn) / (1.0 + bsca * np.dot(vnn, invavnn)) * invavnn
     )
     ngv = qvec / norm_v - alpha / norm_v * (
         (2.0 + norm_v2) * (vn * svec) - np.dot(svec, vnn) * vn

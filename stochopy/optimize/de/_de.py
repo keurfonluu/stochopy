@@ -221,15 +221,10 @@ def de(
 
     # First iteration for callback
     if callback is not None:
-        res = OptimizeResult(
-            x=gbest,
-            fun=gfit,
-            nfev=popsize,
-            nit=1,
-        )
+        res = OptimizeResult(x=gbest, fun=gfit, nfev=popsize, nit=1,)
         if return_all:
             res.update({"xall": xall[:1], "funall": funall[:1]})
-            
+
         callback(X, res)
 
     # Iterate until one of the termination criterion is satisfied
@@ -265,15 +260,10 @@ def de(
         converged = status is not None
 
         if callback is not None:
-            res = OptimizeResult(
-                x=gbest,
-                fun=gfit,
-                nfev=it * popsize,
-                nit=it,
-            )
+            res = OptimizeResult(x=gbest, fun=gfit, nfev=it * popsize, nit=it,)
             if return_all:
                 res.update({"xall": xall[:it], "funall": funall[:it]})
-            
+
             callback(X, res)
 
     res = OptimizeResult(

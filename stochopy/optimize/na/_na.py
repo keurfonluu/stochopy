@@ -186,15 +186,10 @@ def na(
 
     # First iteration for callback
     if callback is not None:
-        res = OptimizeResult(
-            x=unnormalize(gbest),
-            fun=gfit,
-            nfev=popsize,
-            nit=1,
-        )
+        res = OptimizeResult(x=unnormalize(gbest), fun=gfit, nfev=popsize, nit=1,)
         if return_all:
             res.update({"xall": xall[:1], "funall": funall[:1]})
-        
+
         callback(unnormalize(X), res)
 
     # Iterate until one of the termination criterion is satisfied
@@ -221,14 +216,11 @@ def na(
 
         if callback is not None:
             res = OptimizeResult(
-                x=unnormalize(gbest),
-                fun=gfit,
-                nfev=it * popsize,
-                nit=it,
+                x=unnormalize(gbest), fun=gfit, nfev=it * popsize, nit=it,
             )
             if return_all:
                 res.update({"xall": xall[:it], "funall": funall[:it]})
-            
+
             callback(unnormalize(X), res)
 
     res = OptimizeResult(

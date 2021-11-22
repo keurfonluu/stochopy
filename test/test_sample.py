@@ -1,9 +1,9 @@
-import numpy as np
 import helpers
+import numpy as np
 import pytest
 
-from stochopy.sample import sample
 from stochopy.factory import rosenbrock
+from stochopy.sample import sample
 
 
 @pytest.mark.parametrize("options, xref", [({}, [-1.6315912, 2.60020735])])
@@ -28,5 +28,11 @@ def test_callback(method):
         count += 1
 
     maxiter = np.random.randint(2, 10)
-    _ = sample(rosenbrock, [[-5.12, 5.12]] * 2, method=method, options={"maxiter": maxiter}, callback=callback)
+    _ = sample(
+        rosenbrock,
+        [[-5.12, 5.12]] * 2,
+        method=method,
+        options={"maxiter": maxiter},
+        callback=callback,
+    )
     assert count == maxiter

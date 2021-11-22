@@ -88,4 +88,6 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None, callback=
     """
     options = options if options else {}
 
-    return _optimizer_map[method](fun=fun, bounds=bounds, x0=x0, args=args, callback=callback, **options)
+    return _optimizer_map[method](
+        fun=fun, bounds=bounds, x0=x0, args=args, callback=callback, **options
+    )

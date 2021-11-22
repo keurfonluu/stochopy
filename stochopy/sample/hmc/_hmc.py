@@ -132,15 +132,10 @@ def sample(
 
     # First iteration for callback
     if callback is not None:
-        res = SampleResult(
-            x=xall[0],
-            fun=funall[0],
-            nit=1,
-            accept_ratio=1.0,
-        )
+        res = SampleResult(x=xall[0], fun=funall[0], nit=1, accept_ratio=1.0,)
         if return_all:
             res.update({"xall": xall[:1], "funall": funall[:1]})
-            
+
         callback(xall[0], res)
 
     # Leap-frog algorithm
@@ -188,7 +183,7 @@ def sample(
             )
             if return_all:
                 res.update({"xall": xall[:i], "funall": funall[:i]})
-                
+
             callback(xall[i], res)
 
     idx = np.argmin(funall)

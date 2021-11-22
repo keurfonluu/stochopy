@@ -110,15 +110,10 @@ def sample(
 
     # First iteration for callback
     if callback is not None:
-        res = SampleResult(
-            x=xall[0],
-            fun=funall[0],
-            nit=1,
-            accept_ratio=1.0,
-        )
+        res = SampleResult(x=xall[0], fun=funall[0], nit=1, accept_ratio=1.0,)
         if return_all:
             res.update({"xall": xall[:1], "funall": funall[:1]})
-            
+
         callback(xall[0], res)
 
     # Metropolis-Hastings algorithm
@@ -150,14 +145,11 @@ def sample(
             i += 1
             if callback is not None:
                 res = SampleResult(
-                    x=xall[imin],
-                    fun=funall[imin],
-                    nit=i,
-                    accept_ratio=n_accepted / i,
+                    x=xall[imin], fun=funall[imin], nit=i, accept_ratio=n_accepted / i,
                 )
                 if return_all:
-                    res.update({"xall": xall[:i - 1], "funall": funall[:i - 1]})
-                    
+                    res.update({"xall": xall[: i - 1], "funall": funall[: i - 1]})
+
                 callback(xall[i - 1], res)
 
             if i == maxiter:
@@ -167,7 +159,7 @@ def sample(
         x=xall[imin], fun=fmin, nit=maxiter, accept_ratio=n_accepted / maxiter,
     )
     if return_all:
-            res.update({"xall": xall, "funall": funall})
+        res.update({"xall": xall, "funall": funall})
 
     return res
 

@@ -272,11 +272,7 @@ def cmaes(
             1.0 - (1.0 - cs) ** (2.0 * nfev / popsize)
         ) / chind < 1.4 + 2.0 / (ndim + 1.0)
         pc *= 1.0 - cc
-        pc += (
-            np.sqrt(cc * (2.0 - cc) * mueff) * (xmean - xold) / sigma
-            if cond
-            else 0.0
-        )
+        pc += np.sqrt(cc * (2.0 - cc) * mueff) * (xmean - xold) / sigma if cond else 0.0
 
         # Adapt covariance matrix C
         artmp = (arx[arindex[:mu], :] - np.tile(xold, (mu, 1))) / sigma
@@ -331,7 +327,7 @@ def cmaes(
             )
             if return_all:
                 res.update({"xall": xall[:it], "funall": funall[:it]})
-            
+
             callback(unstandardize(arxvalid), res)
 
     res = OptimizeResult(

@@ -110,9 +110,7 @@ def lhs(popsize, ndim, bounds=None):
     """Latin Hypercube sampling."""
     x = np.random.uniform(size=(popsize, ndim)) / popsize
     x += np.linspace(-1.0, 1.0, popsize, endpoint=False)[:, None]
-    pop = np.transpose(
-        [x[np.random.permutation(popsize), i] for i in range(ndim)]
-    )
+    pop = np.transpose([x[np.random.permutation(popsize), i] for i in range(ndim)])
 
     if bounds is not None:
         lower, upper = np.transpose(bounds)
