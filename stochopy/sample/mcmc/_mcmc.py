@@ -110,7 +110,7 @@ def sample(
 
     # First iteration for callback
     if callback is not None:
-        res = SampleResult(x=xall[0], fun=funall[0], nit=1, accept_ratio=1.0,)
+        res = SampleResult(x=xall[0], fun=funall[0], nit=1, accept_ratio=1.0)
         if return_all:
             res.update({"xall": xall[:1], "funall": funall[:1]})
 

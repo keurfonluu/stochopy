@@ -187,7 +187,7 @@ def na(
 
     # First iteration for callback
     if callback is not None:
-        res = OptimizeResult(x=unnormalize(gbest), fun=gfit, nfev=popsize, nit=1,)
+        res = OptimizeResult(x=unnormalize(gbest), fun=gfit, nfev=popsize, nit=1)
         if return_all:
             res.update({"xall": xall[:1], "funall": funall[:1]})
 
