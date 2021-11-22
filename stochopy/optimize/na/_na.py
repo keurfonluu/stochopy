@@ -151,6 +151,7 @@ def na(
     # Normalize and unnormalize
     span = upper - lower
     span_mask = span > 0.0
+    span[~span_mask] = 1.0  # Avoid zero division in normalize
     normalize = lambda x: np.where(span_mask, (x - lower) / span, upper)
     unnormalize = lambda x: np.where(span_mask, x * span + lower, upper)
 
@@ -199,7 +200,7 @@ def na(
         it += 1
 
         # Mutation
-        X = mutation(Xall, Xallfit, popsize, ndim, nr)
+        X = mutation(Xall, Xallfit, popsize, ndim, nr, span_mask)
 
         # Selection
         gbest, gfit, pfit, status = selection_sync(
@@ -238,7 +239,7 @@ def na(
     return res
 
 
-def mutation(Xall, Xallfit, popsize, ndim, nr):
+def mutation(Xall, Xallfit, popsize, ndim, nr, span_mask):
     """
     Update population.
 
@@ -259,6 +260,10 @@ def mutation(Xall, Xallfit, popsize, ndim, nr):
         d2 = ((U[:, 1:] - X[i, 1:]) ** 2).sum(axis=1)
 
         for j in range(ndim):
+            if not span_mask[j]:
+                X[i, j] = 0.0  # Value does not matter as it will be fixed by unnormalize
+                continue
+
             lim = 0.5 * (Xall[k, j] + U[:, j] + (d1 - d2) / (Xall[k, j] - U[:, j]))
 
             idx = lim <= X[i, j]
