@@ -202,7 +202,7 @@ def cmaes(
     D = np.ones(ndim)
     C = np.eye(ndim)
     invsqrtC = np.eye(ndim)
-    chind = np.sqrt(ndim) * (1.0 - 1.0 / (4.0 * ndim) + 1.0 / (21.0 * ndim ** 2))
+    chind = np.sqrt(ndim) * (1.0 - 1.0 / (4.0 * ndim) + 1.0 / (21.0 * ndim**2))
 
     # Initialize boundaries weights
     bnd_weights = np.zeros(ndim)

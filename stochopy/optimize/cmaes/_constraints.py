@@ -33,7 +33,7 @@ def Penalize(
 
     # Get delta fitness values
     perc = np.percentile(arfitness, [25.0, 75.0])
-    delta = (perc[1] - perc[0]) / ndim / diagC.mean() / sigma ** 2
+    delta = (perc[1] - perc[0]) / ndim / diagC.mean() / sigma**2
 
     # Catch non-sensible values
     if delta == 0:

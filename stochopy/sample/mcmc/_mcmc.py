@@ -145,7 +145,10 @@ def sample(
             i += 1
             if callback is not None:
                 res = SampleResult(
-                    x=xall[imin], fun=funall[imin], nit=i, accept_ratio=n_accepted / i,
+                    x=xall[imin],
+                    fun=funall[imin],
+                    nit=i,
+                    accept_ratio=n_accepted / i,
                 )
                 if return_all:
                     res.update({"xall": xall[: i - 1], "funall": funall[: i - 1]})
@@ -156,7 +159,10 @@ def sample(
                 break
 
     res = SampleResult(
-        x=xall[imin], fun=fmin, nit=maxiter, accept_ratio=n_accepted / maxiter,
+        x=xall[imin],
+        fun=fmin,
+        nit=maxiter,
+        accept_ratio=n_accepted / maxiter,
     )
     if return_all:
         res.update({"xall": xall, "funall": funall})

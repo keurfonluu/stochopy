@@ -209,7 +209,7 @@ def vdcma(
     norm_v2 = np.dot(vvec, vvec)
     norm_v = np.sqrt(norm_v2)
     vn = vvec / norm_v
-    vnn = vn ** 2
+    vnn = vn**2
     pc = np.zeros(ndim)
 
     # Initialize boundaries weights
@@ -242,7 +242,7 @@ def vdcma(
         )
         if flg_injection:
             ddx = dx / dvec
-            mnorm = (ddx ** 2).sum() - np.dot(ddx, vvec) ** 2 / (1.0 + norm_v2)
+            mnorm = (ddx**2).sum() - np.dot(ddx, vvec) ** 2 / (1.0 + norm_v2)
             dy = np.linalg.norm(np.random.randn(ndim)) / np.sqrt(mnorm) * dx
             ary[0] = dy
             ary[1] = -dy
@@ -316,7 +316,7 @@ def vdcma(
 
         # Alpha and related variables
         gamma = 1.0 / np.sqrt(1.0 + norm_v2)
-        alpha = np.sqrt(norm_v2 ** 2 + (1.0 + norm_v2) / vnn.max() * (2.0 - gamma)) / (
+        alpha = np.sqrt(norm_v2**2 + (1.0 + norm_v2) / vnn.max() * (2.0 - gamma)) / (
             2.0 + norm_v2
         )
         if alpha < 1.0:
@@ -324,8 +324,8 @@ def vdcma(
         else:
             alpha = 1.0
             beta = 0.0
-        bsca = 2.0 * alpha ** 2 - beta
-        avec = 2.0 - (bsca + 2.0 * alpha ** 2) * vnn
+        bsca = 2.0 * alpha**2 - beta
+        avec = 2.0 - (bsca + 2.0 * alpha**2) * vnn
         invavnn = vnn / avec
 
         # Rank-mu
@@ -374,7 +374,7 @@ def vdcma(
         norm_v2 = np.dot(vvec, vvec)
         norm_v = np.sqrt(norm_v2)
         vn = vvec / norm_v
-        vnn = vn ** 2
+        vnn = vn**2
 
         # Check convergence
         status = converge(
@@ -427,15 +427,15 @@ def pvec_and_qvec(vn, norm_v2, y, weights=None):
     """Return pvec and qvec."""
     y_vn = np.dot(y, vn)
     if weights is None:
-        pvec = y ** 2 - norm_v2 / (1.0 + norm_v2) * (y_vn * y * vn) - 1.0
-        qvec = y_vn * y - (0.5 * (y_vn ** 2 + 1.0 + norm_v2)) * vn
+        pvec = y**2 - norm_v2 / (1.0 + norm_v2) * (y_vn * y * vn) - 1.0
+        qvec = y_vn * y - (0.5 * (y_vn**2 + 1.0 + norm_v2)) * vn
 
     else:
         pvec = np.dot(
-            weights, y ** 2 - norm_v2 / (1.0 + norm_v2) * (y_vn * (y * vn).T).T - 1.0
+            weights, y**2 - norm_v2 / (1.0 + norm_v2) * (y_vn * (y * vn).T).T - 1.0
         )
         qvec = np.dot(
-            weights, (y_vn * y.T).T - np.outer(0.5 * (y_vn ** 2 + 1.0 + norm_v2), vn)
+            weights, (y_vn * y.T).T - np.outer(0.5 * (y_vn**2 + 1.0 + norm_v2), vn)
         )
 
     return pvec, qvec

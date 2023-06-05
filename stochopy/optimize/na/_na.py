@@ -192,7 +192,6 @@ def na(
             funall = np.empty((maxiter, nout))
             xall[0] = X[:nout].copy()
             funall[0] = pfit[:nout].copy()
-            
 
         else:
             xall = np.empty((maxiter, 1, ndim))
@@ -238,7 +237,10 @@ def na(
 
         if callback is not None:
             res = OptimizeResult(
-                x=unnormalize(gbest), fun=gfit, nfev=it * popsize, nit=it,
+                x=unnormalize(gbest),
+                fun=gfit,
+                nfev=it * popsize,
+                nit=it,
             )
             if return_all:
                 res.update({"xall": xall[:it], "funall": funall[:it]})

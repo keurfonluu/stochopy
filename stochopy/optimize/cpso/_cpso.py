@@ -238,7 +238,6 @@ def cpso(
             funall = np.empty((maxiter, nout))
             xall[0] = X[:nout].copy()
             funall[0] = pfit[:nout].copy()
-            
 
         else:
             xall = np.empty((maxiter, 1, ndim))
