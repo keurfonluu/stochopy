@@ -26,6 +26,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    verbosity=1.0,
     callback=None,
 ):
     """
@@ -71,7 +72,9 @@ def minimize(
          - 'mpi': use MPI (uses :mod:`mpi4py`)
 
     return_all : bool, optional, default False
-        Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+        Set to True to return an array with shape (``nit``, ``verbosity`` * ``popsize``, ``ndim``) of all the solutions at each iteration.
+    verbosity : float, optional, default 1.0
+        Fraction of population to consider in `return_all`. If 0.0, returns the best solution at each iteration.
     callback : callable or None, optional, default None
         Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
@@ -130,6 +133,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        verbosity,
         callback,
     )
     res = vdcma(fun, args, True, workers, backend, *optargs)
@@ -154,6 +158,7 @@ def vdcma(
     xtol,
     ftol,
     return_all,
+    verbosity,
     callback,
 ):
     """Optimize with VD-CMA."""
@@ -213,8 +218,9 @@ def vdcma(
 
     # Initialize arrays
     if return_all:
-        xall = np.empty((maxiter, popsize, ndim))
-        funall = np.empty((maxiter, popsize))
+        nout = int(np.ceil(verbosity * popsize))
+        xall = np.empty((maxiter, max(1, nout), ndim))
+        funall = np.empty((maxiter, max(1, nout)))
 
     # VD-CMA
     nfev = 0
@@ -271,8 +277,14 @@ def vdcma(
         nfev += popsize
 
         if return_all:
-            xall[it - 1] = unstandardize(arxvalid)
-            funall[it - 1] = arfitness.copy()
+            if nout > 0:
+                xall[it - 1] = unstandardize(arxvalid[:nout])
+                funall[it - 1] = arfitness[:nout].copy()
+
+            else:
+                idx = arfitness.argmin()
+                xall[it - 1] = unstandardize(arxvalid[idx])
+                funall[it - 1] = arfitness[idx].copy()
 
         # Sort by fitness and compute weighted mean into xmean
         arindex = np.argsort(arfitness)
