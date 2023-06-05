@@ -27,8 +27,8 @@ class OptimizeResult(BaseResult):
     nit : int
         Number of iterations performed by the optimizer.
 
-    Notes
-    -----
+    Note
+    ----
     There may be additional attributes not listed above depending of the specific solver.
 
     """
@@ -70,7 +70,8 @@ def minimize(fun, bounds, x0=None, args=(), method="de", options=None, callback=
 
          - maxiter (int): maximum number of iterations to perform
          - seed (int or None): seed for random number generator
-         - return_all (bool): set to True to return an array of all the solutions at each iteration.
+         - return_all (bool): set to True to return an array of all the solutions at each iteration
+         - verbosity: fraction of population to consider in `return_all`
 
     callback : callable or None, optional, default None
         Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).

@@ -28,6 +28,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    verbosity=1.0,
     callback=None,
 ):
     """
@@ -79,7 +80,9 @@ def minimize(
          - 'mpi': use MPI (uses :mod:`mpi4py`)
 
     return_all : bool, optional, default False
-        Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+        Set to True to return an array with shape (``nit``, ``verbosity`` * ``popsize``, ``ndim``) of all the solutions at each iteration.
+    verbosity : float, optional, default 1.0
+        Fraction of population to consider in `return_all`. If 0.0, returns the best solution at each iteration.
     callback : callable or None, optional, default None
         Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
@@ -168,6 +171,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        verbosity,
         callback,
     )
     res = cpso(fun, args, sync, workers, backend, *optargs)
@@ -194,6 +198,7 @@ def cpso(
     xtol,
     ftol,
     return_all,
+    verbosity,
     callback,
 ):
     """Optimize with CPSO."""
@@ -226,10 +231,19 @@ def cpso(
 
     # Initialize arrays
     if return_all:
-        xall = np.empty((maxiter, popsize, ndim))
-        funall = np.empty((maxiter, popsize))
-        xall[0] = X.copy()
-        funall[0] = pfit.copy()
+        nout = int(np.ceil(verbosity * popsize))
+
+        if nout > 0:
+            xall = np.empty((maxiter, nout, ndim))
+            funall = np.empty((maxiter, nout))
+            xall[0] = X[:nout].copy()
+            funall[0] = pfit[:nout].copy()
+
+        else:
+            xall = np.empty((maxiter, 1, ndim))
+            funall = np.empty((maxiter, 1))
+            xall[0] = gbest
+            funall[0] = gfit
 
     # First iteration for callback
     if callback is not None:
@@ -269,8 +283,14 @@ def cpso(
         )
 
         if return_all:
-            xall[it - 1] = X.copy()
-            funall[it - 1] = pfit.copy()
+            if nout > 0:
+                xall[it - 1] = X[:nout].copy()
+                funall[it - 1] = pfit[:nout].copy()
+
+            else:
+                idx = pfit.argmin()
+                xall[it - 1] = X[idx].copy()
+                funall[it - 1] = pfit[idx].copy()
 
         converged = status is not None
 

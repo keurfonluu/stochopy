@@ -26,6 +26,7 @@ def minimize(
     workers=1,
     backend=None,
     return_all=False,
+    verbosity=1.0,
     callback=None,
 ):
     """
@@ -71,7 +72,9 @@ def minimize(
          - 'mpi': use MPI (uses :mod:`mpi4py`)
 
     return_all : bool, optional, default False
-        Set to True to return an array with shape (``nit``, ``popsize``, ``ndim``) of all the solutions at each iteration.
+        Set to True to return an array with shape (``nit``, ``verbosity`` * ``popsize``, ``ndim``) of all the solutions at each iteration.
+    verbosity : float, optional, default 1.0
+        Fraction of population to consider in `return_all`. If 0.0, returns the best solution at each iteration.
     callback : callable or None, optional, default None
         Called after each iteration. It is a callable with the signature ``callback(X, OptimizeResult state)``, where ``X`` is the current population and ``state`` is a partial :class:`stochopy.optimize.OptimizeResult` object with the same fields as the ones from the return (except ``"success"``, ``"status"`` and ``"message"``).
 
@@ -130,6 +133,7 @@ def minimize(
         xtol,
         ftol,
         return_all,
+        verbosity,
         callback,
     )
     res = vdcma(fun, args, True, workers, backend, *optargs)
@@ -154,6 +158,7 @@ def vdcma(
     xtol,
     ftol,
     return_all,
+    verbosity,
     callback,
 ):
     """Optimize with VD-CMA."""
@@ -204,7 +209,7 @@ def vdcma(
     norm_v2 = np.dot(vvec, vvec)
     norm_v = np.sqrt(norm_v2)
     vn = vvec / norm_v
-    vnn = vn ** 2
+    vnn = vn**2
     pc = np.zeros(ndim)
 
     # Initialize boundaries weights
@@ -213,8 +218,9 @@ def vdcma(
 
     # Initialize arrays
     if return_all:
-        xall = np.empty((maxiter, popsize, ndim))
-        funall = np.empty((maxiter, popsize))
+        nout = int(np.ceil(verbosity * popsize))
+        xall = np.empty((maxiter, max(1, nout), ndim))
+        funall = np.empty((maxiter, max(1, nout)))
 
     # VD-CMA
     nfev = 0
@@ -236,7 +242,7 @@ def vdcma(
         )
         if flg_injection:
             ddx = dx / dvec
-            mnorm = (ddx ** 2).sum() - np.dot(ddx, vvec) ** 2 / (1.0 + norm_v2)
+            mnorm = (ddx**2).sum() - np.dot(ddx, vvec) ** 2 / (1.0 + norm_v2)
             dy = np.linalg.norm(np.random.randn(ndim)) / np.sqrt(mnorm) * dx
             ary[0] = dy
             ary[1] = -dy
@@ -271,8 +277,14 @@ def vdcma(
         nfev += popsize
 
         if return_all:
-            xall[it - 1] = unstandardize(arxvalid)
-            funall[it - 1] = arfitness.copy()
+            if nout > 0:
+                xall[it - 1] = unstandardize(arxvalid[:nout])
+                funall[it - 1] = arfitness[:nout].copy()
+
+            else:
+                idx = arfitness.argmin()
+                xall[it - 1] = unstandardize(arxvalid[idx])
+                funall[it - 1] = arfitness[idx].copy()
 
         # Sort by fitness and compute weighted mean into xmean
         arindex = np.argsort(arfitness)
@@ -304,7 +316,7 @@ def vdcma(
 
         # Alpha and related variables
         gamma = 1.0 / np.sqrt(1.0 + norm_v2)
-        alpha = np.sqrt(norm_v2 ** 2 + (1.0 + norm_v2) / vnn.max() * (2.0 - gamma)) / (
+        alpha = np.sqrt(norm_v2**2 + (1.0 + norm_v2) / vnn.max() * (2.0 - gamma)) / (
             2.0 + norm_v2
         )
         if alpha < 1.0:
@@ -312,8 +324,8 @@ def vdcma(
         else:
             alpha = 1.0
             beta = 0.0
-        bsca = 2.0 * alpha ** 2 - beta
-        avec = 2.0 - (bsca + 2.0 * alpha ** 2) * vnn
+        bsca = 2.0 * alpha**2 - beta
+        avec = 2.0 - (bsca + 2.0 * alpha**2) * vnn
         invavnn = vnn / avec
 
         # Rank-mu
@@ -362,7 +374,7 @@ def vdcma(
         norm_v2 = np.dot(vvec, vvec)
         norm_v = np.sqrt(norm_v2)
         vn = vvec / norm_v
-        vnn = vn ** 2
+        vnn = vn**2
 
         # Check convergence
         status = converge(
@@ -415,15 +427,15 @@ def pvec_and_qvec(vn, norm_v2, y, weights=None):
     """Return pvec and qvec."""
     y_vn = np.dot(y, vn)
     if weights is None:
-        pvec = y ** 2 - norm_v2 / (1.0 + norm_v2) * (y_vn * y * vn) - 1.0
-        qvec = y_vn * y - (0.5 * (y_vn ** 2 + 1.0 + norm_v2)) * vn
+        pvec = y**2 - norm_v2 / (1.0 + norm_v2) * (y_vn * y * vn) - 1.0
+        qvec = y_vn * y - (0.5 * (y_vn**2 + 1.0 + norm_v2)) * vn
 
     else:
         pvec = np.dot(
-            weights, y ** 2 - norm_v2 / (1.0 + norm_v2) * (y_vn * (y * vn).T).T - 1.0
+            weights, y**2 - norm_v2 / (1.0 + norm_v2) * (y_vn * (y * vn).T).T - 1.0
         )
         qvec = np.dot(
-            weights, (y_vn * y.T).T - np.outer(0.5 * (y_vn ** 2 + 1.0 + norm_v2), vn)
+            weights, (y_vn * y.T).T - np.outer(0.5 * (y_vn**2 + 1.0 + norm_v2), vn)
         )
 
     return pvec, qvec

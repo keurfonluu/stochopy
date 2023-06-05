@@ -1,7 +1,7 @@
 stochopy
 ========
 
-|License| |Stars| |Pyversions| |Version| |Downloads| |Code style: black| |Codacy Badge| |Codecov| |Build| |Travis| |DOI|
+|License| |Stars| |Pyversions| |Version| |Downloads| |Code style: black| |Codacy Badge| |Codecov| |Build| |Docs| |DOI|
 
 **stochopy** provides functions for sampling or optimizing objective functions with or without constraints. Its API is directly inspired by **scipy**'s own optimization submodule which should make the switch from one module to another straightforward.
 
@@ -142,8 +142,8 @@ Related projects
 .. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4058008.svg?style=flat
    :target: https://doi.org/10.5281/zenodo.4058008
 
-.. |Build| image:: https://img.shields.io/github/workflow/status/keurfonluu/stochopy/Python%20package
+.. |Build| image:: https://img.shields.io/github/workflow/status/keurfonluu/stochopy/ci.yml
    :target: https://github.com/keurfonluu/stochopy
 
-.. |Travis| image:: https://img.shields.io/travis/com/keurfonluu/stochopy/master?label=docs
+.. |Docs| image:: https://img.shields.io/github/actions/workflow/status/keurfonluu/stochopy/doc.yml?label=docs
    :target: https://keurfonluu.github.io/stochopy/

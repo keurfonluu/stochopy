@@ -21,8 +21,8 @@ class SampleResult(BaseResult):
     nit : int
         Number of samples generated.
 
-    Notes
-    -----
+    Note
+    ----
     There may be additional attributes not listed above depending of the specific solver.
 
     """
