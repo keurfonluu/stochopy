@@ -1,0 +1,48 @@
+name: Build documentation
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  docs:
+
+    runs-on: ubuntu-latest
+    env:
+      PYVISTA_OFF_SCREEN: 'True'
+      ALLOW_PLOTTING: true
+      SHELLOPTS: 'errexit:pipefail'
+
+    steps:
+      - uses: nschloe/action-cached-lfs-checkout@v1
+      - uses: actions/setup-python@v4
+        with:
+            python-version: '3.9'
+      - name: Install OSMesa VTK
+        run: |
+          sudo apt update
+          sudo apt install libosmesa6-dev libgl1-mesa-dev retry --option="APT::Acquire::Retries=3"
+          pip install https://github.com/pyvista/pyvista-wheels/raw/main/vtk-osmesa-9.1.0-cp39-cp39-linux_x86_64.whl
+      - name: Install libGLU for pygmsh
+        run: |
+          sudo apt install libglu1
+      - name: Install toughio
+        run: |
+          git lfs pull
+          pip install -e .[full]
+      - name: Install dependencies
+        run: |
+          pip install -r doc/requirements.txt
+      - name: Sphinx build
+        run: |
+          sphinx-build -b html doc/source doc/build
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.event_name == 'push' }}
+        with:
+          publish_branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: doc/build/
+          force_orphan: true
