@@ -142,7 +142,7 @@ Related projects
 .. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4058008.svg?style=flat
    :target: https://doi.org/10.5281/zenodo.4058008
 
-.. |Build| image:: https://img.shields.io/github/workflow/status/keurfonluu/stochopy/ci.yml
+.. |Build| image:: https://img.shields.io/github/actions/workflow/status/keurfonluu/stochopy/ci.yml
    :target: https://github.com/keurfonluu/stochopy
 
 .. |Docs| image:: https://img.shields.io/github/actions/workflow/status/keurfonluu/stochopy/doc.yml?label=docs
